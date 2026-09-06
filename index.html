@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Alpha QA — Inspection Board v15</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#C33D27" />
+  <title>Alpha QA — Inspection Board v17</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,600;6..72,700&display=swap" rel="stylesheet" />
@@ -142,11 +143,22 @@
     .grid {
       display: grid;
       grid-template-columns: minmax(0, 1.45fr) 400px;
-      grid-template-areas: "cal side" "charts charts";
+      grid-template-areas:
+        "cal side"
+        "under side"
+        "charts charts";
       gap: 12px;
     }
     .main { grid-area: cal; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
     .side { grid-area: side; display: flex; flex-direction: column; gap: 12px; }
+    .under-cal {
+      grid-area: under;
+      display: grid;
+      grid-template-columns: 1.15fr 1fr;
+      gap: 12px;
+      min-width: 0;
+      align-items: start;
+    }
     .donuts {
       grid-area: charts;
       display: grid;
@@ -282,14 +294,78 @@
     .year-block { margin-top: 18px; }
     .year-block h3 { margin: 0 0 8px; font-size: 14px; }
     footer { margin-top: 12px; color: var(--muted); font-size: 11px; }
+    .agenda { display: none; }
+    .agenda-day {
+      border: 1px solid var(--line); border-radius: 12px; padding: 10px;
+      background: #fff; display: flex; flex-direction: column; gap: 6px;
+    }
+    .agenda-day.today { box-shadow: inset 0 0 0 2px var(--month); }
+    .agenda-day.conflict { background: #FFF1F2; border-color: #FECDD3; }
+    .agenda-day.hit { background: #FEF08A; border-color: #CA8A04; }
+    .agenda-head { display: flex; align-items: baseline; gap: 8px; }
+    .agenda-head b { font-size: 22px; font-weight: 800; min-width: 28px; }
+    .agenda-head span { color: var(--muted); font-size: 13px; font-weight: 700; }
+    .agenda-head em { margin-left: auto; font-style: normal; font-size: 12px; font-weight: 800; color: var(--conflict-ink); }
+    .agenda-empty { color: var(--muted); font-size: 13px; padding: 4px 2px; }
     @media (max-width: 900px) {
       .year-kpis { grid-template-columns: 1fr 1fr; }
     }
     @media (max-width: 1180px) {
-      .grid { grid-template-columns: 1fr; grid-template-areas: "cal" "side" "charts"; }
+      .grid { grid-template-columns: 1fr; grid-template-areas: "cal" "under" "side" "charts"; }
+      .under-cal { grid-template-columns: 1fr; }
       .donuts { grid-template-columns: 1fr 1fr; }
       .visit-family { grid-column: 1 / -1; }
       .day { min-height: 120px; }
+    }
+    @media (max-width: 820px) {
+      .page { padding: 8px 8px 24px; padding-bottom: max(24px, env(safe-area-inset-bottom)); }
+      h1 { font-size: 20px; line-height: 1.15; }
+      .sub { font-size: 11px; }
+      header { align-items: flex-start; gap: 8px; margin-bottom: 8px; }
+      .head-right { margin-left: 0; width: 100%; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
+      .pf-kpis { gap: 8px; }
+      .pf-ring-wrap, .pf-ring { width: 44px; height: 44px; }
+      .pf-ring-wrap b { font-size: 11px; }
+      .pf-kpi span { font-size: 10px; }
+      .nav { gap: 4px; }
+      .nav button { min-width: 36px; min-height: 36px; padding: 6px 8px; font-size: 14px; border-radius: 10px; }
+      .nav #monthBtn, .nav #yearBtn { min-width: 56px; font-size: 15px; }
+      .filters {
+        position: sticky; top: 0; z-index: 30;
+        gap: 4px; padding: 8px;
+        flex-wrap: wrap;
+        border-radius: 12px; margin-bottom: 8px;
+      }
+      .filters .lab { font-size: 9px; margin-right: 2px; }
+      .chip, select.chip {
+        padding: 6px 8px; font-size: 11px; white-space: nowrap; flex: 0 0 auto;
+        border-radius: 6px;
+      }
+      .chip.name, .chip.all { font-size: 12px; padding: 6px 10px; }
+      select.chip { padding-right: 22px; background-position: right 6px center; }
+      .pic-search { font-size: 16px; }
+      .weekdays, .cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; }
+      .weekdays span { font-size: 10px; padding-bottom: 2px; }
+      .agenda { display: none; }
+      .cal-card { padding: 8px; }
+      .day { min-height: 0; padding: 3px; border-radius: 6px; gap: 2px; overflow: hidden; }
+      .day .num { font-size: 11px; }
+      .job { font-size: 9px; line-height: 1.2; padding: 3px 3px 3px 5px; border-radius: 5px; border-left-width: 3px; overflow: hidden; }
+      .job b { font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .job .row { gap: 2px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+      .job .dur, .stamp, .re { font-size: 9px; }
+      .job .ico { display: none; }
+      .under-cal { grid-template-columns: 1fr; }
+      .donuts { grid-template-columns: 1fr; }
+      .visit-family { grid-template-columns: 1fr; }
+      .chart-big { position: static; font-size: 28px; margin-bottom: 6px; }
+      .bars-svg { height: 180px; }
+      .year-kpis { grid-template-columns: 1fr 1fr; }
+      .year-block { overflow-x: auto; }
+      table.ys { min-width: 560px; }
+      .cat-row { grid-template-columns: 72px 1fr 40px; }
+      .card { padding: 12px; border-radius: 12px; }
+      .card h2 { font-size: 13px; margin-bottom: 8px; padding-bottom: 6px; }
     }
   </style>
 </head>
@@ -298,7 +374,7 @@
     <header>
       <div>
         <h1>Full Month Calendar — <span class="month-name" id="monthName">September</span> <span class="year-name" id="yearName">2026</span></h1>
-        <div class="sub">v15 · Standard: <b>20 working days / month</b> · data: <b id="dataSrc">demo</b> · click <b>Year</b> for yearly summary</div>
+        <div class="sub">v17 · Standard: <b>20 working days / month</b> · data: <b id="dataSrc">demo</b> · click <b>Year</b> for yearly summary</div>
       </div>
       <div class="head-right">
         <div class="pf-kpis">
@@ -338,6 +414,7 @@
             <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
           </div>
           <div class="cal" id="cal"></div>
+          <div class="agenda" id="agenda"></div>
         </section>
         <section class="card year-panel" id="yearPanel">
           <div class="year-head">
@@ -371,21 +448,24 @@
           </div>
         </section>
         <section class="card">
+          <h2>Alerts</h2>
+          <div class="alerts" id="alerts"></div>
+        </section>
+      </aside>
+
+      <div class="under-cal">
+        <section class="card">
           <h2>Location · inspect days</h2>
           <p class="map-note">Bubble size = visit days (not cost). Click a country to filter. Sheet droplist: IN / CN / VN / TH / KH / MY / ID.</p>
           <svg class="map-svg" id="seaMap" viewBox="0 0 420 360"></svg>
           <div class="map-leg" id="mapLegend"></div>
         </section>
         <section class="card">
-          <h2>Alerts</h2>
-          <div class="alerts" id="alerts"></div>
-        </section>
-        <section class="card">
           <h2>Category · Inline / Final</h2>
           <div class="cat-key"><span><i style="background:#38BDF8"></i>Inline</span><span><i style="background:#FB7185"></i>Final</span></div>
           <div id="catBars"></div>
         </section>
-      </aside>
+      </div>
 
       <div class="donuts">
         <section class="card wide">
@@ -434,7 +514,7 @@
         </section>
       </div>
     </div>
-    <footer>v15. Reads Form Responses CSV. Refresh after a new Form submit.</footer>
+    <footer>v17. Location + Category under the calendar. Phone: compact 7-day grid. Reads Form Responses CSV.</footer>
   </div>
 
   <script src="sheet-config.js"></script>
@@ -869,35 +949,73 @@
           cell.appendChild(t);
         }
         list.forEach(j => {
-          const p = pic(j.pic);
-          const el = document.createElement("div");
-          el.className = "job" + (j.type === "leave" ? " leave" : "");
-          if (j.type !== "leave") {
-            el.style.background = TINT[j.pic];
-            el.style.borderLeftColor = p.color;
-          }
-          const dur = j.days === 1 ? "1d" : "½d";
-          const stamp = j.result === "pass"
-            ? `<span class="stamp ok">✅ Pass</span>`
-            : j.result === "fail"
-              ? `<span class="stamp bad">❌ Fail</span>`
-              : j.result === "pending"
-                ? `<span class="stamp wait">⏳ Pending</span>`
-                : "";
-          const re = j.visit > 1 ? `<span class="re">(Re-inspect)</span>` : "";
-          el.innerHTML = j.type === "leave"
-            ? `<b>${p.name}</b><div class="row"><span class="ico">🌴</span> Annual leave</div>`
-            : `<b>${p.name} <span class="dur">(${dur})</span></b>
-               <div class="row"><span class="ico">🏭</span> ${j.factory} <span class="ico">👤</span> ${j.customer}${j.country && j.country !== "VN" ? ` · ${j.country}` : ""}</div>
-               <div class="row"><span class="ico">📌</span> ${j.type[0].toUpperCase()+j.type.slice(1)} | ${stamp} ${re}</div>`;
-          el.onclick = ev => {
-            ev.stopPropagation();
-            if (f.pic === j.pic) setFilter("customer", j.customer || "all");
-            else setFilter("pic", j.pic);
-          };
-          cell.appendChild(el);
+          cell.appendChild(jobCard(j));
         });
         cal.appendChild(cell);
+      }
+      renderAgenda(shown, byAll, byShow);
+    }
+
+    function jobCard(j) {
+      const p = pic(j.pic);
+      const el = document.createElement("div");
+      el.className = "job" + (j.type === "leave" ? " leave" : "");
+      if (j.type !== "leave") {
+        el.style.background = TINT[j.pic] || "#F8FAFC";
+        el.style.borderLeftColor = p.color;
+      }
+      const dur = j.days === 1 ? "1d" : "½d";
+      const stamp = j.result === "pass"
+        ? `<span class="stamp ok">✅ Pass</span>`
+        : j.result === "fail"
+          ? `<span class="stamp bad">❌ Fail</span>`
+          : j.result === "pending"
+            ? `<span class="stamp wait">⏳ Pending</span>`
+            : "";
+      const re = j.visit > 1 ? `<span class="re">(Re-inspect)</span>` : "";
+      el.innerHTML = j.type === "leave"
+        ? `<b>${p.name}</b><div class="row"><span class="ico">🌴</span> Annual leave</div>`
+        : `<b>${p.name} <span class="dur">(${dur})</span></b>
+           <div class="row"><span class="ico">🏭</span> ${j.factory} <span class="ico">👤</span> ${j.customer}${j.country && j.country !== "VN" ? ` · ${j.country}` : ""}</div>
+           <div class="row"><span class="ico">📌</span> ${j.type[0].toUpperCase()+j.type.slice(1)} | ${stamp} ${re}</div>`;
+      el.onclick = ev => {
+        ev.stopPropagation();
+        if (f.pic === j.pic) setFilter("customer", j.customer || "all");
+        else setFilter("pic", j.pic);
+      };
+      return el;
+    }
+
+    function renderAgenda(shown, byAll, byShow) {
+      const box = $("agenda");
+      if (!box) return;
+      box.innerHTML = "";
+      const last = new Date(view.y, view.m + 1, 0).getDate();
+      const DOW = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+      for (let d = 1; d <= last; d++) {
+        const key = iso(view.y, view.m, d);
+        const dt = new Date(view.y, view.m, d);
+        const list = byShow[key] || [];
+        const meta = dayMeta(byAll[key] || []);
+        const row = document.createElement("div");
+        row.dataset.date = key;
+        row.className = "agenda-day"
+          + (key === TODAY ? " today" : "")
+          + (meta.warn ? " conflict" : "")
+          + (hitDate === key ? " hit" : "");
+        const tag = meta.overload && meta.conflict ? "Overload / conflict"
+          : meta.overload ? "Overload"
+          : meta.conflict ? "Conflict" : "";
+        row.innerHTML = `<div class="agenda-head"><b>${d}</b><span>${DOW[mon0(dt)]}</span>${tag ? `<em>${tag}</em>` : ""}</div>`;
+        if (!list.length) {
+          const empty = document.createElement("div");
+          empty.className = "agenda-empty";
+          empty.textContent = "No visit";
+          row.appendChild(empty);
+        } else {
+          list.forEach(j => row.appendChild(jobCard(j)));
+        }
+        box.appendChild(row);
       }
     }
 
@@ -1144,15 +1262,16 @@
           const d = el.dataset.date;
           if (!d) return;
           hitDate = hitDate === d ? "" : d;
-          document.querySelectorAll(".day.hit").forEach(c => c.classList.remove("hit"));
+          document.querySelectorAll(".day.hit, .agenda-day.hit").forEach(c => c.classList.remove("hit"));
           $("alerts").querySelectorAll(".item.on").forEach(n => n.classList.remove("on"));
           if (hitDate) {
             el.classList.add("on");
             const cell = document.querySelector(`.day[data-date="${hitDate}"]`);
-            if (cell) {
-              cell.classList.add("hit");
-              cell.scrollIntoView({ behavior: "smooth", block: "center" });
-            }
+            const row = document.querySelector(`.agenda-day[data-date="${hitDate}"]`);
+            const target = window.matchMedia("(max-width: 820px)").matches ? (row || cell) : (cell || row);
+            if (cell) cell.classList.add("hit");
+            if (row) row.classList.add("hit");
+            if (target) target.scrollIntoView({ behavior: "smooth", block: "center" });
           }
         };
       });
