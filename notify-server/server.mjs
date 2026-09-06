@@ -151,7 +151,6 @@ async function eveningRun(forcePic) {
   const result = [];
   for (const pic of pics) {
     const mine = jobs.filter(j => j.pic === pic && j.date === tomorrow);
-    if (!mine.length && !forcePic) { result.push({ pic, n: 0 }); continue; }
     const body = mine.length
       ? `Tomorrow ${tomorrow}: ${lineFor(mine)}`
       : `Tomorrow ${tomorrow}: no inspect on the sheet.`;
