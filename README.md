@@ -16,8 +16,9 @@ Do **not** edit this GitHub repo to add inspections. GitHub only hosts the page.
 
 | File | Role |
 | --- | --- |
-| `index.html` | Board (v29 — Pass/Fail header rings +40%) |
+| `index.html` | Board (v30 — offline cache, PIC toast, Alert jump) |
 | `sheet-config.js` | Published CSV URL |
+| `sw.js` / `manifest.json` | Offline PWA cache |
 | `SHEET.md` | Form → CSV → Pages |
 
 Anyone with the CSV URL can read the log. Keep secrets out of the Sheet.
