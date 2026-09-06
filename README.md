@@ -16,7 +16,7 @@ Do **not** edit this GitHub repo to add inspections. GitHub only hosts the page.
 
 | File | Role |
 | --- | --- |
-| `index.html` | Board (v36 — droplist Pass/Fail/Pending; no push) |
+| `index.html` | Board (v37 — native Pass/Fail/Pending droplist in day popup) |
 | `sheet-config.js` | Published CSV URL |
 | `sw.js` / `manifest.json` | Offline cache of the last visit |
 | `SHEET.md` | Form → CSV → Pages |
