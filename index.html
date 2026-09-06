@@ -1718,11 +1718,18 @@
     }
     function scheduleEveningWatch() {
       if (eveningTimer) clearInterval(eveningTimer);
-      eveningTimer = setInterval(() => {
+      const tick = () => {
         if (!whoAmI || !notifyOn) return;
-        const n = vnNow();
-        if (n.hour === 20 && n.minute < 3) fireTomorrowReminder(false);
-      }, 60 * 1000);
+        if (vnNow().hour >= 20) fireTomorrowReminder(false);
+      };
+      tick();
+      eveningTimer = setInterval(tick, 60 * 1000);
+    }
+    function pushBase() {
+      const cfg = String(window.PUSH_URL || "").replace(/\/$/, "");
+      if (location.protocol === "https:" && !/github\.io$/i.test(location.hostname)) return location.origin;
+      if (location.hostname === "localhost" || location.hostname === "127.0.0.1") return cfg || location.origin;
+      return cfg;
     }
     function urlB64ToUint8Array(b64) {
       const pad = "=".repeat((4 - b64.length % 4) % 4);
@@ -1730,10 +1737,10 @@
       return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
     }
     async function subscribePush() {
-      const base = String(window.PUSH_URL || "").replace(/\/$/, "");
+      const base = pushBase();
       if (!base || !navigator.serviceWorker) return { ok: false, reason: "no server" };
       try {
-        const r = await fetch(base + "/vapidPublicKey");
+        const r = await fetch(base + "/vapidPublicKey", { headers: { "Bypass-Tunnel-Reminder": "true" } });
         if (!r.ok) throw new Error("vapid");
         const { publicKey } = await r.json();
         const reg = await navigator.serviceWorker.ready;
@@ -1743,7 +1750,7 @@
         });
         const res = await fetch(base + "/subscribe", {
           method: "POST",
-          headers: { "content-type": "application/json" },
+          headers: { "content-type": "application/json", "Bypass-Tunnel-Reminder": "true" },
           body: JSON.stringify({ pic: whoAmI, subscription: sub.toJSON() })
         });
         return { ok: res.ok };
@@ -1752,13 +1759,13 @@
       }
     }
     async function testPushNow() {
-      const base = String(window.PUSH_URL || "").replace(/\/$/, "");
+      const base = pushBase();
       fireTomorrowReminder(true);
       if (!base || !whoAmI) return;
       try {
         await fetch(base + "/test", {
           method: "POST",
-          headers: { "content-type": "application/json" },
+          headers: { "content-type": "application/json", "Bypass-Tunnel-Reminder": "true" },
           body: JSON.stringify({ pic: whoAmI })
         });
       } catch (e) {}
@@ -1768,7 +1775,7 @@
       const bar = $("whoBar");
       if (!bar) return;
       const live = navigator.onLine;
-      const push = String(window.PUSH_URL || "").trim();
+      const push = pushBase();
       bar.innerHTML = `
         <span>This phone is</span>
         <select id="whoSel">

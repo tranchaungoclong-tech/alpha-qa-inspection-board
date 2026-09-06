@@ -106,7 +106,7 @@ function jobsFromCsv(text) {
 }
 
 async function loadJobs() {
-  const res = await fetch(CSV + (CSV.includes("?") ? "&" : "?") + "t=" + Date.now());
+  const res = await fetch(CSV + (CSV.includes("?") ? "&" : "?") + "t=" + Date.now(), { signal: AbortSignal.timeout(15000) });
   if (!res.ok) throw new Error("csv " + res.status);
   return jobsFromCsv(await res.text());
 }
@@ -142,6 +142,7 @@ async function eveningRun(forcePic) {
   const { date: today } = vnParts();
   const tomorrow = addDays(today, 1);
   const key = today;
+  console.log("evening tick", today, "hour", vnParts().hour, forcePic ? "force " + forcePic : "");
   if (!forcePic && sent[key]) {
     console.log("already sent evening", key);
     return { ok: true, skipped: true };
@@ -169,7 +170,7 @@ async function eveningRun(forcePic) {
 
 function cors(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Headers", "content-type");
+  res.setHeader("Access-Control-Allow-Headers", "content-type, Bypass-Tunnel-Reminder");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
 }
 function readBody(req) {
@@ -249,7 +250,9 @@ server.listen(PORT, "0.0.0.0", () => {
   console.log("VAPID public:", vapid.publicKey);
 });
 
-setInterval(() => {
-  const { hour, minute } = vnParts();
-  if (hour === HOUR && minute < 3) eveningRun().catch(err => console.log(err));
-}, 60 * 1000);
+function maybeEveningTick() {
+  const { hour } = vnParts();
+  if (hour >= HOUR) eveningRun().catch(err => console.log(err));
+}
+setTimeout(maybeEveningTick, 8000);
+setInterval(maybeEveningTick, 60 * 1000);
