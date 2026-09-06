@@ -49,7 +49,7 @@ function ensureVapid() {
     saveJson(KEYS, keys);
     console.log("Generated VAPID keys → data/vapid.json (keep privateKey off GitHub)");
   }
-  webpush.setVapidDetails("mailto:qa-board@alpha.local", keys.publicKey, keys.privateKey);
+  webpush.setVapidDetails("https://tranchaungoclong-tech.github.io/alpha-qa-inspection-board/", keys.publicKey, keys.privateKey);
   return keys;
 }
 
@@ -72,6 +72,21 @@ function addDays(isoDate, n) {
   const [y, m, d] = isoDate.split("-").map(Number);
   const dt = new Date(Date.UTC(y, m - 1, d + n));
   return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, "0")}-${String(dt.getUTCDate()).padStart(2, "0")}`;
+}
+function parseDateCell(v) {
+  const s = String(v || "").trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const m = s.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4})/);
+  if (m) {
+    const a = Number(m[1]), b = Number(m[2]), y = Number(m[3]);
+    const month = a > 12 ? b : a, day = a > 12 ? a : b;
+    return `${y}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  }
+  const d = new Date(s);
+  if (!isNaN(d)) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+  return "";
 }
 function parseCsv(text) {
   const rows = [];
@@ -102,7 +117,7 @@ function jobsFromCsv(text) {
   const iCust = col(["customer"]);
   return rows.slice(1).map(r => {
     const get = i => (i >= 0 ? String(r[i] || "").trim() : "");
-    const date = get(iDate).slice(0, 10);
+    const date = parseDateCell(get(iDate));
     const pic = get(iPic).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     if (!date || !pic) return null;
     return { date, pic, factory: get(iFac), type: get(iType).toLowerCase() || "final", customer: get(iCust) };
@@ -128,10 +143,15 @@ async function sendToPic(pic, title, body, date) {
   const dead = [];
   for (const s of mine) {
     try {
-      await webpush.sendNotification(s.subscription, JSON.stringify({ title, body, date, pic }));
-      console.log("sent", pic, date);
+      const host = String(s.subscription.endpoint || "");
+      await webpush.sendNotification(s.subscription, JSON.stringify({ title, body, date, pic }), {
+        TTL: 86400,
+        urgency: "high"
+      });
+      console.log("sent", pic, date, host.includes("web.push.apple.com") ? "iphone" : "web");
     } catch (err) {
-      console.log("push fail", pic, err.statusCode || err.message);
+      const host = String(s.subscription.endpoint || "");
+      console.log("push fail", pic, err.statusCode || err.message, host.includes("web.push.apple.com") ? "iphone" : "web", err.body || "");
       if (err.statusCode === 404 || err.statusCode === 410) dead.push(s);
     }
   }
