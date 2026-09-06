@@ -1,0 +1,1392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Alpha QA — Inspection Board v15</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,600;6..72,700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --red: #C33D27;
+      --ink: #0F172A;
+      --muted: #64748B;
+      --line: #E2E8F0;
+      --bg: #F8FAFC;
+      --card: #FFFFFF;
+      --leave: #FEF08A;
+      --leave-ink: #A16207;
+      --conflict: #FECACA;
+      --conflict-ink: #BE123C;
+      --pass: #22C55E;
+      --warn: #F59E0B;
+      --fail: #F43F5E;
+      --shadow: 0 1px 2px rgba(15,23,42,.04), 0 10px 24px rgba(15,23,42,.06);
+      --month: #C33D27;
+      --month-ink: #9A3412;
+      --month-tint: #FEE2E2;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 "IBM Plex Sans", sans-serif; }
+    .page { max-width: 1720px; margin: 0 auto; padding: 18px 18px 40px; }
+    header { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }
+    h1 { font-family: Newsreader, serif; font-size: 42px; margin: 0; letter-spacing: -.02em; }
+    h1 .month-name { color: var(--month); font-style: italic; }
+    h1 .year-name { color: var(--red); font-style: italic; }
+    .sub { color: var(--muted); font-size: 14px; margin-top: 4px; }
+    .sub b { color: var(--ink); }
+    .head-right { display: flex; align-items: center; gap: 18px; margin-left: auto; }
+    .pf-kpis { display: flex; gap: 14px; align-items: center; }
+    .pf-kpi {
+      border: 0; background: transparent; cursor: pointer; padding: 2px 4px;
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+    }
+    .pf-kpi span { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .02em; }
+    .pf-kpi.pass span { color: #15803D; }
+    .pf-kpi.fail span { color: #BE123C; }
+    .pf-ring-wrap { position: relative; width: 68px; height: 68px; border-radius: 50%; }
+    .pf-ring { width: 68px; height: 68px; display: block; }
+    .pf-ring-wrap b {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      font-size: 15px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums;
+    }
+    .pf-kpi.on .pf-ring-wrap { box-shadow: inset 0 0 0 3px #fff, 0 0 0 2px var(--ink); }
+    .nav { display: flex; gap: 10px; align-items: center; }
+    .nav button {
+      border: 1px solid var(--line); background: #fff; border-radius: 14px;
+      min-width: 52px; min-height: 52px; padding: 10px 16px; cursor: pointer;
+      font: 700 18px "IBM Plex Sans", sans-serif; color: var(--ink);
+      box-shadow: var(--shadow);
+    }
+    .nav #monthBtn {
+      min-width: 108px; font-size: 22px; letter-spacing: .02em;
+      background: var(--month); color: #fff; border-color: var(--month);
+    }
+    .nav #yearBtn {
+      min-width: 96px; font-size: 22px; letter-spacing: .02em;
+      background: var(--red); color: #fff; border-color: var(--red);
+    }
+    .year-dd { position: relative; }
+    .year-menu {
+      display: none; position: absolute; z-index: 20; top: calc(100% + 6px); right: 0;
+      min-width: 120px; max-height: 280px; overflow: auto;
+      background: #fff; border: 1px solid var(--line); border-radius: 14px;
+      box-shadow: var(--shadow); padding: 6px;
+    }
+    .year-dd.open .year-menu { display: block; }
+    .year-opt {
+      display: block; width: 100%; border: 0; background: transparent; text-align: center;
+      cursor: pointer; padding: 8px 10px; border-radius: 10px;
+      font: 700 16px "IBM Plex Sans", sans-serif; color: var(--ink);
+    }
+    .year-opt:hover { background: #F8FAFC; }
+    .year-opt.on { background: var(--red); color: #fff; }
+    .filters {
+      display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+      background: #1E3A5F; border: 0; border-radius: 16px;
+      padding: 12px 14px; margin-bottom: 12px; box-shadow: var(--shadow);
+    }
+    .filters .lab { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: #93C5FD; font-weight: 700; margin-right: 6px; }
+    .chip, select.chip {
+      border: 0; background: #2C5282; border-radius: 8px;
+      padding: 8px 14px; font: 700 13px "IBM Plex Sans", sans-serif; cursor: pointer; color: #fff;
+      box-shadow: none;
+    }
+    select.chip { appearance: none; padding-right: 28px; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path fill='white' d='M0 0l6 8 6-8z'/></svg>"); background-repeat: no-repeat; background-position: right 10px center; }
+    .chip.name { font-size: 18px; padding: 12px 20px; font-weight: 800; }
+    .chip.all {
+      font-size: 18px; padding: 12px 22px; font-weight: 800;
+      background: #FB7185; color: #fff;
+    }
+    .chip.pic { background: #22C55E; color: #fff; }
+    .chip.on, select.chip.on {
+      box-shadow: inset 0 0 0 3px #fff;
+    }
+    .chip.all.on { background: #F43F5E; }
+    .chip.pic.on { color: #fff; }
+    .day.hit {
+      background: #FEF08A !important; border-color: #CA8A04;
+      box-shadow: inset 0 0 0 2px #EAB308;
+    }
+    .alerts .item { cursor: pointer; }
+    .alerts .item.on { outline: 2px solid #EAB308; }
+    .pic-dd { position: relative; }
+    .pic-menu {
+      display: none; position: absolute; z-index: 20; top: calc(100% + 6px); left: 0;
+      width: min(280px, 70vw); max-height: 340px; overflow: auto;
+      background: #fff; border: 1px solid var(--line); border-radius: 14px;
+      box-shadow: var(--shadow); padding: 8px;
+    }
+    .pic-dd.open .pic-menu { display: block; }
+    .pic-search {
+      width: 100%; border: 1px solid var(--line); border-radius: 10px;
+      padding: 8px 10px; font: 600 13px "IBM Plex Sans", sans-serif; margin-bottom: 6px;
+    }
+    .pic-opt {
+      display: flex; align-items: center; gap: 8px; width: 100%;
+      border: 0; background: transparent; text-align: left; cursor: pointer;
+      padding: 8px 10px; border-radius: 10px; font: 600 14px "IBM Plex Sans", sans-serif; color: var(--ink);
+    }
+    .pic-opt:hover { background: #F8FAFC; }
+    .pic-opt.on { background: var(--ink); color: #fff; }
+    .pic-opt .sw { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
+    .chip.type { background: #F97316; }
+    .chip.type.on { background: #EA580C; }
+    .chip.result { background: #0EA5E9; }
+    .chip.result.on { background: #0284C7; }
+    .chip.warn { background: #E11D48; color: #fff; }
+    .chip.warn.on { background: #BE123C; }
+    .chip.leave { background: #EAB308; color: #1C1917; }
+    .chip.leave.on { background: #A16207; color: #fff; }
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.45fr) 400px;
+      grid-template-areas: "cal side" "charts charts";
+      gap: 12px;
+    }
+    .main { grid-area: cal; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+    .side { grid-area: side; display: flex; flex-direction: column; gap: 12px; }
+    .donuts {
+      grid-area: charts;
+      display: grid;
+      grid-template-columns: 1.15fr 1fr 3fr 1fr;
+      gap: 10px;
+      align-items: stretch;
+    }
+    .donuts .card { padding: 12px; min-width: 0; }
+    .donuts .card h2 { font-size: 14px; margin-bottom: 8px; padding-bottom: 6px; }
+    .donuts svg.donut { width: 100%; max-width: none; }
+    .donuts .leg { font-size: 12px; gap: 4px 8px; font-weight: 600; }
+    .donuts .wide svg.donut { width: 100%; }
+    .donuts .wide .leg { font-size: 13px; }
+    .visit-family {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      background: #EEF2FF;
+      border: 1px solid #C7D2FE;
+      border-radius: 16px;
+      padding: 8px;
+      min-width: 0;
+    }
+    .visit-family .card { margin: 0; box-shadow: none; border: 1px solid var(--line); }
+    .map-svg { width: 100%; height: auto; display: block; background: #E8F4FC; border-radius: 12px; }
+    .map-note { margin: 8px 0 0; font-size: 11px; color: var(--muted); line-height: 1.35; }
+    .map-leg { display: flex; flex-wrap: wrap; gap: 6px 10px; margin-top: 8px; font-size: 12px; font-weight: 700; }
+    .map-leg span { display: flex; align-items: center; gap: 5px; cursor: pointer; }
+    .map-leg span.on { text-decoration: underline; }
+    .cal-card { border-top: 6px solid var(--month); }
+    .card {
+      background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+      padding: 16px; box-shadow: var(--shadow);
+    }
+    .card h2 { margin: 0 0 12px; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+    .weekdays, .cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 7px; }
+    .weekdays span { text-align: center; color: var(--muted); font-size: 14px; font-weight: 700; padding-bottom: 6px; }
+    .day {
+      min-height: 148px; background: #fff; border: 1px solid var(--line);
+      border-radius: 12px; padding: 8px; display: flex; flex-direction: column; gap: 5px;
+    }
+    .day.out { background: #F8FAFC; opacity: .55; }
+    .day.today { box-shadow: inset 0 0 0 2px var(--month); }
+    .day.conflict { background: #FFF1F2; border-color: #FECDD3; }
+    .day .num { font-size: 16px; font-weight: 700; color: var(--ink); }
+    .day.out .num { color: var(--muted); }
+    .job {
+      border-radius: 10px; padding: 8px 8px 8px 10px; font-size: 13px; line-height: 1.35;
+      cursor: pointer; border-left: 4px solid var(--ink); position: relative; background: #fff;
+    }
+    .job:hover { filter: brightness(.97); }
+    .job b { display: block; font-size: 15px; }
+    .job .row { color: #475569; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+    .job.leave { background: var(--leave); color: var(--leave-ink); border-left-color: #D97706; }
+    .job.conflict-tag { background: #FEE2E2; color: var(--conflict-ink); font-weight: 600; border-left: 0; }
+    .job .dur { font-weight: 600; color: var(--muted); font-size: 13px; }
+    .ico { font-size: 14px; line-height: 1; }
+    .stamp { font-weight: 700; font-size: 13px; }
+    .stamp.ok { color: var(--pass); }
+    .stamp.bad { color: var(--fail); }
+    .stamp.wait { color: var(--warn); }
+    .re { font-size: 11px; color: var(--fail); font-weight: 700; }
+    .side { display: flex; flex-direction: column; gap: 12px; }
+    table.lb { width: 100%; border-collapse: collapse; }
+    .metric-note { margin: -6px 0 10px; font-size: 11px; color: var(--muted); line-height: 1.35; }
+    table.lb th { text-align: left; font-size: 11px; font-weight: 600; color: var(--muted); padding: 0 0 8px; }
+    table.lb th:nth-child(2), table.lb td:nth-child(2),
+    table.lb th:nth-child(3), table.lb td:nth-child(3) { text-align: right; }
+    table.lb td { padding: 11px 0; border-top: 1px solid var(--line); font-size: 16px; }
+    table.lb tr { cursor: pointer; }
+    table.lb tr:hover td { background: #F8FAFC; }
+    table.lb .name { font-weight: 700; }
+    table.lb .load { color: var(--ink); font-weight: 600; }
+    table.lb .ok { color: var(--pass); font-weight: 700; }
+    table.lb .mid { color: var(--warn); font-weight: 700; }
+    table.lb .bad { color: var(--fail); font-weight: 700; }
+    .chart-box { position: relative; }
+    .chart-big {
+      position: absolute; right: 8px; top: 0; font-family: Newsreader, serif;
+      font-size: 48px; line-height: 1; color: var(--ink); letter-spacing: -.03em;
+    }
+    .chart-big small { display: block; font-family: "IBM Plex Sans", sans-serif; font-size: 13px; color: var(--muted); letter-spacing: 0; font-style: normal; margin-top: 2px; }
+    .bars-svg { width: 100%; height: 240px; display: block; }
+    .donut-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    svg.donut { width: 100%; height: auto; aspect-ratio: 1; }
+    .side-donuts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .side-donuts .card { padding: 12px; }
+    .side-donuts .card h2 { font-size: 14px; margin-bottom: 8px; padding-bottom: 6px; }
+    .side-donuts svg.donut { width: min(100%, 188px); }
+    .side-donuts .leg { font-size: 12px; gap: 6px 8px; font-weight: 600; }
+    .cat-row { display: grid; grid-template-columns: 92px 1fr 44px; gap: 8px; align-items: center; margin-bottom: 10px; cursor: pointer; }
+    .cat-row .lab { font-size: 12px; font-weight: 700; color: var(--ink); text-align: right; line-height: 1.2; }
+    .cat-track { height: 22px; background: #F1F5F9; border-radius: 6px; overflow: hidden; display: flex; }
+    .cat-seg { height: 100%; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; font-size: 11px; font-weight: 800; color: #fff; min-width: 0; }
+    .cat-seg.inline { background: #38BDF8; }
+    .cat-seg.final { background: #FB7185; }
+    .cat-tot { font-size: 13px; font-weight: 800; text-align: right; }
+    .cat-key { display: flex; gap: 14px; justify-content: flex-end; font-size: 11px; font-weight: 700; color: var(--muted); margin-bottom: 8px; }
+    .cat-key i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+    .leg { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 14px; font-size: 13px; font-weight: 600; }
+    .leg span { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+    .dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+    .split { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; margin-top: 4px; }
+    .split .kpi { background: #F8FAFC; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+    .split .kpi b { display: block; font-family: Newsreader, serif; font-size: 28px; line-height: 1; }
+    .split .kpi em { font-style: normal; font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+    .alerts { font-size: 12px; }
+    .alerts .item { padding: 7px 8px; border-radius: 8px; margin-bottom: 6px; }
+    .alerts .c { background: #FEF2F2; color: var(--conflict-ink); }
+    .alerts .l { background: #FFFBEB; color: var(--leave-ink); }
+    .alerts .o { background: #FEF3C7; color: #92400E; }
+    .year-panel { display: none; }
+    body.year-mode .year-panel { display: block; }
+    body.year-mode .cal-card { display: none; }
+    body.year-mode .nav #yearBtn { box-shadow: inset 0 0 0 3px #fff; }
+    .year-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+    .year-head h2 { margin: 0; border: 0; padding: 0; font-size: 22px; }
+    .year-head .back {
+      border: 1px solid var(--line); background: #fff; border-radius: 10px;
+      padding: 8px 14px; font: 700 13px "IBM Plex Sans", sans-serif; cursor: pointer;
+    }
+    .year-kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
+    .year-kpis .kpi { background: #F8FAFC; border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+    .year-kpis .kpi b { display: block; font-family: Newsreader, serif; font-size: 28px; line-height: 1; }
+    .year-kpis .kpi em { font-style: normal; font-size: 11px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+    table.ys { width: 100%; border-collapse: collapse; margin-top: 6px; }
+    table.ys th { text-align: left; font-size: 11px; font-weight: 700; color: var(--muted); padding: 0 8px 8px; text-transform: uppercase; letter-spacing: .04em; }
+    table.ys th.num, table.ys td.num { text-align: right; }
+    table.ys td { padding: 10px 8px; border-top: 1px solid var(--line); font-size: 14px; }
+    table.ys tr.click { cursor: pointer; }
+    table.ys tr.click:hover td { background: #F8FAFC; }
+    table.ys .name { font-weight: 700; }
+    .year-block { margin-top: 18px; }
+    .year-block h3 { margin: 0 0 8px; font-size: 14px; }
+    footer { margin-top: 12px; color: var(--muted); font-size: 11px; }
+    @media (max-width: 900px) {
+      .year-kpis { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 1180px) {
+      .grid { grid-template-columns: 1fr; grid-template-areas: "cal" "side" "charts"; }
+      .donuts { grid-template-columns: 1fr 1fr; }
+      .visit-family { grid-column: 1 / -1; }
+      .day { min-height: 120px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div>
+        <h1>Full Month Calendar — <span class="month-name" id="monthName">September</span> <span class="year-name" id="yearName">2026</span></h1>
+        <div class="sub">v15 · Standard: <b>20 working days / month</b> · data: <b id="dataSrc">demo</b> · click <b>Year</b> for yearly summary</div>
+      </div>
+      <div class="head-right">
+        <div class="pf-kpis">
+          <button type="button" class="pf-kpi pass" id="passKpi">
+            <div class="pf-ring-wrap">
+              <svg class="pf-ring" id="passRing" viewBox="0 0 64 64"></svg>
+              <b id="passPct">—</b>
+            </div>
+            <span>Pass</span>
+          </button>
+          <button type="button" class="pf-kpi fail" id="failKpi">
+            <div class="pf-ring-wrap">
+              <svg class="pf-ring" id="failRing" viewBox="0 0 64 64"></svg>
+              <b id="failPct">—</b>
+            </div>
+            <span>Fail</span>
+          </button>
+        </div>
+        <div class="nav">
+          <button id="prev" aria-label="Previous month">‹</button>
+          <button id="monthBtn">Sep</button>
+          <div class="year-dd" id="yearDd">
+            <button id="yearBtn" type="button">2026</button>
+            <div class="year-menu" id="yearMenu"></div>
+          </div>
+          <button id="next" aria-label="Next month">›</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="filters" id="filters"></div>
+
+    <div class="grid">
+      <div class="main">
+        <section class="card cal-card">
+          <div class="weekdays">
+            <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+          </div>
+          <div class="cal" id="cal"></div>
+        </section>
+        <section class="card year-panel" id="yearPanel">
+          <div class="year-head">
+            <h2>Yearly Summary — <span id="yearTitle">2026</span></h2>
+            <button class="back" id="yearBack" type="button">Back to month</button>
+          </div>
+          <p class="metric-note">Click a month row to open that calendar. Occ. % = inspect days ÷ 240 (20 days × 12 months). Pass % = latest result per job. Frank (Manager) is on the calendar, not on Quality / Workload.</p>
+          <div class="year-kpis" id="yearKpis"></div>
+          <div class="year-block">
+            <h3>By month</h3>
+            <div id="yearMonths"></div>
+          </div>
+          <div class="year-block">
+            <h3>By PIC</h3>
+            <div id="yearPics"></div>
+          </div>
+        </section>
+      </div>
+
+      <aside class="side">
+        <section class="card">
+          <h2><span aria-hidden="true">🏆</span> Inspection Quality</h2>
+          <p class="metric-note">Days (Occ.) = all visit days ÷ 20 (re-inspect counts). Pass % = passed jobs ÷ closed jobs (re-inspect visits excluded). Inspectors only — Manager excluded.</p>
+          <div id="board"></div>
+        </section>
+        <section class="card">
+          <h2>Staff Workload <span style="color:var(--muted);font-weight:500">(20-day base)</span></h2>
+          <div class="chart-box">
+            <div class="chart-big" id="barBig"></div>
+            <svg class="bars-svg" id="bars" viewBox="0 0 360 240" preserveAspectRatio="xMidYMid meet"></svg>
+          </div>
+        </section>
+        <section class="card">
+          <h2>Location · inspect days</h2>
+          <p class="map-note">Bubble size = visit days (not cost). Click a country to filter. Sheet droplist: IN / CN / VN / TH / KH / MY / ID.</p>
+          <svg class="map-svg" id="seaMap" viewBox="0 0 420 360"></svg>
+          <div class="map-leg" id="mapLegend"></div>
+        </section>
+        <section class="card">
+          <h2>Alerts</h2>
+          <div class="alerts" id="alerts"></div>
+        </section>
+        <section class="card">
+          <h2>Category · Inline / Final</h2>
+          <div class="cat-key"><span><i style="background:#38BDF8"></i>Inline</span><span><i style="background:#FB7185"></i>Final</span></div>
+          <div id="catBars"></div>
+        </section>
+      </aside>
+
+      <div class="donuts">
+        <section class="card wide">
+          <h2>Factory</h2>
+          <div class="donut-wrap">
+            <svg class="donut" id="factoryDonut" viewBox="0 0 280 280"></svg>
+            <div class="leg" id="factoryLegend"></div>
+          </div>
+        </section>
+        <section class="card">
+          <h2>Client</h2>
+          <div class="donut-wrap">
+            <svg class="donut" id="donut" viewBox="0 0 280 280"></svg>
+            <div class="leg" id="legend"></div>
+          </div>
+        </section>
+        <div class="visit-family">
+          <section class="card">
+            <h2>Visit Type</h2>
+            <div class="donut-wrap">
+              <svg class="donut" id="typeDonut" viewBox="0 0 280 280"></svg>
+              <div class="leg" id="typeLegend"></div>
+            </div>
+          </section>
+          <section class="card">
+            <h2>Sourcing</h2>
+            <div class="donut-wrap">
+              <svg class="donut" id="sourcingDonut" viewBox="0 0 280 280"></svg>
+              <div class="leg" id="sourcingLegend"></div>
+            </div>
+          </section>
+          <section class="card">
+            <h2>Audit Factory</h2>
+            <div class="donut-wrap">
+              <svg class="donut" id="auditDonut" viewBox="0 0 280 280"></svg>
+              <div class="leg" id="auditLegend"></div>
+            </div>
+          </section>
+        </div>
+        <section class="card">
+          <h2>Pass / Fail</h2>
+          <div class="donut-wrap">
+            <svg class="donut" id="resultDonut" viewBox="0 0 280 280"></svg>
+            <div class="leg" id="resultLegend"></div>
+          </div>
+        </section>
+      </div>
+    </div>
+    <footer>v15. Reads Form Responses CSV. Refresh after a new Form submit.</footer>
+  </div>
+
+  <script src="sheet-config.js"></script>
+  <script>
+    const PEOPLE = [
+      { id: "philip", name: "Philip", color: "#FB7185" },
+      { id: "elsa", name: "Elsa", color: "#2DD4BF" },
+      { id: "peter", name: "Peter", color: "#38BDF8" },
+      { id: "frank", name: "Frank", color: "#C084FC", role: "manager" },
+      { id: "edith", name: "Edith", color: "#4ADE80" }
+    ];
+    const STAFF = PEOPLE.filter(p => p.role !== "manager");
+    const WORKDAYS = 20;
+    const YEAR_DAYS = 240;
+    const CLIENT_COLOR = { A93: "#38BDF8", P01: "#4ADE80", A74: "#FBBF24", QVC: "#C084FC", Supreme: "#FB7185" };
+    const FACTORY_COLOR = ["#2DD4BF","#60A5FA","#FB7185","#C084FC","#FBBF24","#4ADE80","#22D3EE","#F97316"];
+    const TYPE_COLOR = { inline: "#38BDF8", final: "#FB7185", sourcing: "#FBBF24", audit: "#A78BFA" };
+    const RESULT_COLOR = { Pass: "#22C55E", Fail: "#F43F5E" };
+    const SOURCING_COLOR = ["#FBBF24","#FB7185","#2DD4BF","#818CF8"];
+    const AUDIT_COLOR = ["#A78BFA","#22D3EE","#4ADE80","#F472B6"];
+    const COUNTRY = {
+      IN: { name: "India", x: 92, y: 168, color: "#F59E0B" },
+      CN: { name: "China", x: 312, y: 72, color: "#F43F5E" },
+      VN: { name: "Vietnam", x: 308, y: 186, color: "#0EA5E9" },
+      TH: { name: "Thailand", x: 228, y: 158, color: "#22C55E" },
+      KH: { name: "Cambodia", x: 268, y: 188, color: "#F97316" },
+      MY: { name: "Malaysia", x: 238, y: 256, color: "#A78BFA" },
+      ID: { name: "Indonesia", x: 268, y: 312, color: "#14B8A6" }
+    };
+    const MONTH_THEME = [
+      { month: "#0EA5E9", ink: "#0369A1", tint: "#E0F2FE" },
+      { month: "#8B5CF6", ink: "#5B21B6", tint: "#F3E8FF" },
+      { month: "#10B981", ink: "#047857", tint: "#D1FAE5" },
+      { month: "#EC4899", ink: "#BE185D", tint: "#FCE7F3" },
+      { month: "#84CC16", ink: "#3F6212", tint: "#ECFCCB" },
+      { month: "#EAB308", ink: "#A16207", tint: "#FEF9C3" },
+      { month: "#F97316", ink: "#C2410C", tint: "#FFEDD5" },
+      { month: "#14B8A6", ink: "#0F766E", tint: "#CCFBF1" },
+      { month: "#E11D48", ink: "#9F1239", tint: "#FFE4E6" },
+      { month: "#D97706", ink: "#92400E", tint: "#FEF3C7" },
+      { month: "#78716C", ink: "#44403C", tint: "#E7E5E4" },
+      { month: "#1D4ED8", ink: "#1E3A8A", tint: "#DBEAFE" }
+    ];
+    const TINT = {
+      philip: "#FFE4E6", elsa: "#CCFBF1", peter: "#E0F2FE", frank: "#F3E8FF", edith: "#DCFCE7"
+    };
+
+    const DEMO_JOBS = [
+      { date: "2026-09-01", pic: "philip", days: 1, factory: "Evergreen", customer: "P01", type: "final", style: "2 items", result: "pass", job: "P01-2IT", visit: 1 },
+      { date: "2026-09-02", pic: "elsa", days: 1, factory: "", customer: "", type: "leave", style: "Annual leave", result: "", job: "LEAVE-ELSA-0902", visit: 1 },
+      { date: "2026-09-03", pic: "peter", days: 0.5, factory: "Mill 12", customer: "QVC", type: "inline", style: "QVC-02", result: "fail", job: "QVC-02", visit: 1 },
+      { date: "2026-09-16", pic: "peter", days: 0.5, factory: "Mill 12", customer: "QVC", type: "inline", style: "QVC-02", result: "pass", job: "QVC-02", visit: 2 },
+      { date: "2026-09-04", pic: "philip", days: 1, factory: "Evergreen", customer: "P01", type: "final", style: "P01 last 2", result: "pass", job: "P01-LAST2", visit: 1 },
+      { date: "2026-09-07", pic: "philip", days: 1, factory: "NP Pottery WH", customer: "A74", type: "inline", style: "100 pcs", result: "fail", job: "A74-100", visit: 1 },
+      { date: "2026-09-11", pic: "philip", days: 1, factory: "NP Pottery", customer: "A74", type: "final", style: "A74 set", result: "pass", job: "A74-SET", visit: 1 },
+      { date: "2026-09-08", pic: "frank", days: 1, factory: "A93 factory", customer: "A93", type: "final", style: "SKU-03", result: "fail", job: "A93-SKU03", visit: 1 },
+      { date: "2026-09-08", pic: "philip", days: 1, factory: "G2G", customer: "P01", type: "final", style: "290CO", result: "pass", job: "P01-290CO", visit: 1 },
+      { date: "2026-09-10", pic: "edith", days: 1, factory: "Sanlian", customer: "Supreme", type: "inline", style: "SKU-04", result: "pass", job: "SUP-SKU04", visit: 1 },
+      { date: "2026-09-11", pic: "edith", days: 0.5, factory: "NP Pottery", customer: "A74", type: "final", style: "A74 set", result: "pass", job: "A74-SET-E", visit: 1 },
+      { date: "2026-09-14", pic: "philip", days: 1, factory: "A93 factory", customer: "A93", type: "inline", style: "A93", result: "pass", job: "A93-IN", visit: 1 },
+      { date: "2026-09-15", pic: "philip", days: 1, factory: "A93 factory", customer: "A93", type: "inline", style: "A93 pack", result: "pass", job: "A93-PACK", visit: 1 },
+      { date: "2026-09-15", pic: "elsa", days: 1, factory: "Sanlian", customer: "Supreme", type: "final", style: "QA", result: "fail", job: "SUP-QA", visit: 1 },
+      { date: "2026-09-22", pic: "elsa", days: 1, factory: "Sanlian", customer: "Supreme", type: "final", style: "QA", result: "pass", job: "SUP-QA", visit: 2 },
+      { date: "2026-09-15", pic: "peter", days: 1, factory: "Mill 12", customer: "QVC", type: "final", style: "QVC", result: "pass", job: "QVC-F", visit: 1 },
+      { date: "2026-09-15", pic: "frank", days: 1, factory: "Ceramic CN", customer: "A74", type: "final", style: "vase", result: "fail", job: "A74-VASE", visit: 1 },
+      { date: "2026-09-17", pic: "frank", days: 1, factory: "Ceramic CN", customer: "A74", type: "final", style: "vase", result: "pass", job: "A74-VASE", visit: 2 },
+      { date: "2026-09-18", pic: "philip", days: 1, factory: "A93 / HN", customer: "A93", type: "final", style: "fly + final", result: "pending", job: "A93-FLY", visit: 1 },
+      { date: "2026-09-21", pic: "edith", days: 1, factory: "Sanlian", customer: "Supreme", type: "inline", style: "audit", result: "pass", job: "SUP-AUD", visit: 1 },
+      { date: "2026-09-24", pic: "peter", days: 1, factory: "Evergreen", customer: "P01", type: "final", style: "P01", result: "pass", job: "P01-24", visit: 1 },
+      { date: "2026-09-25", pic: "frank", days: 1, factory: "Mill 12", customer: "QVC", type: "final", style: "QVC", result: "pass", job: "QVC-25", visit: 1 },
+      { date: "2026-09-28", pic: "elsa", days: 1, factory: "Ceramic VN", customer: "A74", type: "inline", style: "vase 4-item", result: "pass", job: "A74-4IT", visit: 1 },
+      { date: "2026-09-29", pic: "edith", days: 1, factory: "Evergreen", customer: "P01", type: "final", style: "P01", result: "pass", job: "P01-29", visit: 1 },
+      { date: "2026-09-02", pic: "edith", days: 1, factory: "WH North", customer: "A93", type: "inline", style: "carton", result: "pass", job: "A93-CTN", visit: 1 },
+      { date: "2026-09-09", pic: "elsa", days: 1, factory: "Ceramic VN", customer: "A74", type: "inline", style: "vase", result: "fail", job: "A74-VN", visit: 1 },
+      { date: "2026-09-19", pic: "philip", days: 1, factory: "A93 factory", customer: "A93", type: "final", style: "3rd party", result: "pending", job: "A93-3P", visit: 1 },
+      { date: "2026-09-05", pic: "elsa", days: 1, factory: "Mill 12", customer: "QVC", type: "sourcing", style: "new mill", result: "pass", job: "SRC-QVC-M12", visit: 1 },
+      { date: "2026-09-12", pic: "frank", days: 1, factory: "Ceramic VN", customer: "A74", type: "sourcing", style: "vase mill", result: "fail", job: "SRC-A74-VN", visit: 1 },
+      { date: "2026-09-23", pic: "philip", days: 0.5, factory: "G2G", customer: "P01", type: "sourcing", style: "290CO mill", result: "pass", job: "SRC-P01-G2G", visit: 1 },
+      { date: "2026-09-10", pic: "peter", days: 0.5, factory: "Sanlian", customer: "Supreme", type: "audit", style: "factory audit", result: "pass", job: "AUD-SUP-SL", visit: 1 },
+      { date: "2026-09-16", pic: "edith", days: 1, factory: "Evergreen", customer: "P01", type: "audit", style: "process audit", result: "fail", job: "AUD-P01-EG", visit: 1 },
+      { date: "2026-09-26", pic: "elsa", days: 1, factory: "NP Pottery", customer: "A74", type: "audit", style: "A74 audit", result: "pass", job: "AUD-A74-NP", visit: 1 },
+      { date: "2026-01-15", pic: "philip", days: 1, factory: "Evergreen", customer: "P01", type: "final", style: "Jan P01", result: "pass", job: "P01-JAN", visit: 1 },
+      { date: "2026-03-12", pic: "elsa", days: 1, factory: "Ceramic VN", customer: "A74", type: "inline", style: "Mar vase", result: "pass", job: "A74-MAR", visit: 1 },
+      { date: "2026-06-18", pic: "peter", days: 1, factory: "Mill 12", customer: "QVC", type: "final", style: "Jun QVC", result: "fail", job: "QVC-JUN", visit: 1 },
+      { date: "2026-06-25", pic: "peter", days: 1, factory: "Mill 12", customer: "QVC", type: "final", style: "Jun QVC", result: "pass", job: "QVC-JUN", visit: 2 },
+      { date: "2026-10-08", pic: "frank", days: 1, factory: "A93 factory", customer: "A93", type: "inline", style: "Oct A93", result: "pass", job: "A93-OCT", visit: 1 },
+      { date: "2026-11-20", pic: "edith", days: 1, factory: "Sanlian", customer: "Supreme", type: "audit", style: "Nov audit", result: "pass", job: "AUD-NOV", visit: 1 },
+      { date: "2026-12-04", pic: "philip", days: 0.5, factory: "G2G", customer: "P01", type: "sourcing", style: "Dec mill", result: "pass", job: "SRC-DEC", visit: 1 }
+    ];
+    DEMO_JOBS.forEach(j => {
+      if (j.type === "leave") return;
+      if (j.customer === "P01") j.category = "Candle";
+      else if (j.customer === "A74") j.category = "Pottery vase";
+      else j.category = "Handicraft";
+      if ((j.factory || "").includes("CN")) j.country = "CN";
+      else j.country = j.country || "VN";
+    });
+    DEMO_JOBS.push(
+      { date: "2026-09-18", pic: "philip", days: 1, factory: "PP mill", customer: "A93", type: "final", style: "KH fly + final", result: "pending", job: "A93-KH", visit: 1, category: "Handicraft", country: "KH" },
+      { date: "2026-09-25", pic: "elsa", days: 1, factory: "Bangkok mill", customer: "QVC", type: "sourcing", style: "TH mill", result: "pass", job: "SRC-TH", visit: 1, category: "Handicraft", country: "TH" },
+      { date: "2026-10-14", pic: "frank", days: 1, factory: "JB mill", customer: "Supreme", type: "audit", style: "MY audit", result: "pass", job: "AUD-MY", visit: 1, category: "Handicraft", country: "MY" },
+      { date: "2026-11-06", pic: "peter", days: 1, factory: "Moradabad mill", customer: "QVC", type: "sourcing", style: "IN mill", result: "pass", job: "SRC-IN", visit: 1, category: "Handicraft", country: "IN" },
+      { date: "2026-11-18", pic: "edith", days: 1, factory: "Java mill", customer: "Supreme", type: "audit", style: "ID audit", result: "pass", job: "AUD-ID", visit: 1, category: "Handicraft", country: "ID" }
+    );
+    let JOBS = DEMO_JOBS.slice();
+
+    const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    const SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const TODAY = "2026-09-05";
+    let view = { y: 2026, m: 8 };
+    let yearMode = false;
+    let f = { pic: "all", customer: "all", factory: "all", type: "all", result: "all", category: "all", country: "all", conflicts: false, leave: false };
+    let hitDate = "";
+
+    const $ = id => document.getElementById(id);
+    const pic = id => PEOPLE.find(p => p.id === id);
+    const iso = (y,m,d) => `${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    const parse = s => { const [y,m,d] = s.split("-").map(Number); return new Date(y, m-1, d); };
+    const mon0 = d => (d.getDay() + 6) % 7;
+    const fmt = n => (Math.round(n * 10) / 10).toString().replace(/\.0$/, "");
+    const EXTRA_PIC_COLOR = ["#FB7185","#2DD4BF","#38BDF8","#C084FC","#4ADE80","#FBBF24","#F97316","#818CF8"];
+
+    function slugPic(name) {
+      return String(name || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "unknown";
+    }
+    function ensurePic(nameOrId) {
+      const raw = String(nameOrId || "").trim();
+      if (!raw) return "unknown";
+      const id = slugPic(raw);
+      let p = PEOPLE.find(x => x.id === id || x.name.toLowerCase() === raw.toLowerCase());
+      if (!p) {
+        p = { id, name: raw.replace(/\b\w/g, c => c.toUpperCase()), color: EXTRA_PIC_COLOR[PEOPLE.length % EXTRA_PIC_COLOR.length] };
+        PEOPLE.push(p);
+        TINT[id] = "#F1F5F9";
+      }
+      return p.id;
+    }
+    function parseDateCell(v) {
+      const s = String(v || "").trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+      const m = s.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4})$/);
+      if (m) {
+        const a = Number(m[1]), b = Number(m[2]), y = Number(m[3]);
+        const month = a > 12 ? b : a, day = a > 12 ? a : b;
+        return `${y}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+      }
+      const d = new Date(s);
+      if (!isNaN(d)) return iso(d.getFullYear(), d.getMonth(), d.getDate());
+      return "";
+    }
+    function splitCsv(text) {
+      const rows = [];
+      let row = [], cell = "", q = false;
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        if (q) {
+          if (ch === '"' && text[i + 1] === '"') { cell += '"'; i++; }
+          else if (ch === '"') q = false;
+          else cell += ch;
+        } else if (ch === '"') q = true;
+        else if (ch === ",") { row.push(cell); cell = ""; }
+        else if (ch === "\n") { row.push(cell); rows.push(row); row = []; cell = ""; }
+        else if (ch !== "\r") cell += ch;
+      }
+      if (cell || row.length) { row.push(cell); rows.push(row); }
+      return rows.filter(r => r.some(c => String(c).trim()));
+    }
+    function normHead(h) {
+      return String(h || "").trim().toLowerCase()
+        .replace(/^﻿/, "")
+        .replace(/[^a-z0-9]+/g, "_")
+        .replace(/^_|_$/g, "");
+    }
+    function col(head, names) {
+      for (const n of names) {
+        const i = head.indexOf(n);
+        if (i >= 0) return i;
+      }
+      return -1;
+    }
+    function mapCountry(code) {
+      const c = String(code || "VN").trim().toUpperCase();
+      if (c === "CAM" || c === "KH" || c === "CAMBODIA") return "KH";
+      if (c === "IND" || c === "IN" || c === "INDIA") return "IN";
+      if (c === "IDN" || c === "ID" || c === "INDONESIA") return "ID";
+      if (c === "THA" || c === "TH" || c === "THAILAND") return "TH";
+      if (c === "MYS" || c === "MY" || c === "MALAYSIA") return "MY";
+      if (c === "CHN" || c === "CN" || c === "CHINA") return "CN";
+      if (c === "VNM" || c === "VN" || c === "VIETNAM") return "VN";
+      return c || "VN";
+    }
+    function jobsFromCsv(text) {
+      const rows = splitCsv(text);
+      if (!rows.length) return [];
+      const head = rows[0].map(normHead);
+      const iDate = col(head, ["date"]);
+      const iPic = col(head, ["pic"]);
+      const iDays = col(head, ["days", "day"]);
+      const iFac = col(head, ["factory"]);
+      const iCust = col(head, ["customer"]);
+      const iType = col(head, ["type"]);
+      const iCat = col(head, ["category"]);
+      const iCty = col(head, ["country"]);
+      const iStyle = col(head, ["style"]);
+      const iJob = col(head, ["job_id", "job"]);
+      const iVisit = col(head, ["visit", "visit_1_lan_dau_2_re_inspect"]);
+      const iRes = col(head, ["result", "resut"]);
+      return rows.slice(1).map(r => {
+        const get = i => (i >= 0 ? String(r[i] || "").trim() : "");
+        const type = get(iType).toLowerCase();
+        const result = get(iRes).toLowerCase();
+        const country = mapCountry(get(iCty) || "VN");
+        const date = parseDateCell(get(iDate));
+        if (!date || !get(iPic)) return null;
+        const picName = get(iPic);
+        const factory = get(iFac);
+        const visitRaw = get(iVisit).replace(/[^\d.]/g, "");
+        return {
+          date,
+          pic: ensurePic(picName),
+          days: Number(get(iDays)) || 1,
+          factory,
+          customer: get(iCust),
+          type: type || "final",
+          category: get(iCat),
+          country,
+          style: get(iStyle),
+          result,
+          job: get(iJob) || `${picName}-${date}-${factory}`,
+          visit: Number(visitRaw) || 1
+        };
+      }).filter(Boolean);
+    }
+    async function loadJobs() {
+      const src = $("dataSrc");
+      const url = String(window.SHEET_CSV || "").trim();
+      if (!url) {
+        JOBS = DEMO_JOBS.slice();
+        if (src) src.textContent = "demo (paste SHEET_CSV to go live)";
+        return;
+      }
+      try {
+        const res = await fetch(url + (url.includes("?") ? "&" : "?") + "t=" + Date.now());
+        if (!res.ok) throw new Error(res.status);
+        const text = await res.text();
+        const live = jobsFromCsv(text);
+        if (!live.length) throw new Error("empty");
+        JOBS = live;
+        if (src) src.textContent = "live Sheet";
+      } catch (err) {
+        JOBS = DEMO_JOBS.slice();
+        if (src) src.textContent = "demo (Sheet fetch failed)";
+      }
+    }
+
+    function monthJobs() {
+      return JOBS.filter(j => {
+        const d = parse(j.date);
+        return d.getFullYear() === view.y && d.getMonth() === view.m;
+      });
+    }
+    function yearJobs() {
+      return JOBS.filter(j => parse(j.date).getFullYear() === view.y);
+    }
+    function scopeJobs() {
+      return yearMode ? yearJobs() : monthJobs();
+    }
+    function passFilter(j) {
+      if (f.pic !== "all" && j.pic !== f.pic) return false;
+      if (f.customer !== "all" && j.customer !== f.customer) return false;
+      if (f.factory !== "all" && j.factory !== f.factory) return false;
+      if (f.category !== "all" && j.category !== f.category) return false;
+      if (f.country !== "all" && j.country !== f.country) return false;
+      if (f.type === "leave" && j.type !== "leave") return false;
+      if (f.type !== "all" && f.type !== "leave" && j.type !== f.type) return false;
+      if (f.leave && j.type !== "leave") return false;
+      if (f.result !== "all") {
+        if (j.type === "leave") return false;
+        if (j.result !== f.result) return false;
+      }
+      return true;
+    }
+    function dayMeta(list) {
+      const inspect = list.filter(j => j.type !== "leave");
+      const pics = inspect.map(j => j.pic);
+      const dupPic = pics.some((p,i) => pics.indexOf(p) !== i);
+      const weekend = list.some(j => { const w = mon0(parse(j.date)); return w >= 5 && j.type !== "leave"; });
+      const overload = new Set(pics).size >= 3 || inspect.reduce((s,j)=>s+j.days,0) > 2;
+      const conflict = dupPic || weekend;
+      return { inspect, overload, conflict, warn: overload || conflict };
+    }
+    function filteredFrom(all) {
+      const byDate = {};
+      all.forEach(j => { (byDate[j.date] ||= []).push(j); });
+      return all.filter(j => {
+        if (!passFilter(j)) return false;
+        if (f.conflicts) {
+          const meta = dayMeta(byDate[j.date] || []);
+          if (!meta.warn) return false;
+        }
+        return true;
+      });
+    }
+    function filteredMonth() { return filteredFrom(monthJobs()); }
+    function filteredScope() { return filteredFrom(scopeJobs()); }
+    function setFilter(key, val) {
+      f[key] = (f[key] === val) ? (key === "conflicts" || key === "leave" ? false : "all") : val;
+      if (key === "leave" && f.leave) f.type = "all";
+      render();
+    }
+
+    function renderFilters() {
+      const jobs = scopeJobs();
+      const clients = [...new Set(jobs.map(j => j.customer).filter(Boolean))];
+      const factories = [...new Set(jobs.map(j => j.factory).filter(Boolean))];
+      const cats = [...new Set(jobs.map(j => j.category).filter(Boolean))];
+      const wrap = $("filters");
+      const picOn = f.pic !== "all";
+      const picLabel = picOn ? pic(f.pic).name : `PIC (${PEOPLE.length})`;
+      wrap.innerHTML = `
+        <span class="lab">Filter</span>
+        <button class="chip all ${f.pic==="all"&&f.customer==="all"&&f.factory==="all"&&f.type==="all"&&f.result==="all"&&f.category==="all"&&f.country==="all"&&!f.conflicts&&!f.leave?"on":""}" data-reset>All</button>
+        <div class="pic-dd" id="picDd">
+          <button class="chip name pic ${picOn?"on":""}" id="picBtn">${picLabel}</button>
+          <div class="pic-menu" id="picMenu">
+            <input class="pic-search" id="picSearch" placeholder="Search PIC…" autocomplete="off" />
+            <button class="pic-opt ${f.pic==="all"?"on":""}" data-k="pic" data-v="all">All PICs</button>
+            ${PEOPLE.map(p => `<button class="pic-opt ${f.pic===p.id?"on":""}" data-k="pic" data-v="${p.id}" data-name="${p.name.toLowerCase()}"><i class="sw" style="background:${p.color}"></i>${p.name}</button>`).join("")}
+          </div>
+        </div>
+        <button class="chip type ${f.type==="inline"?"on":""}" data-k="type" data-v="inline">Inline</button>
+        <button class="chip type ${f.type==="final"?"on":""}" data-k="type" data-v="final">Final</button>
+        <button class="chip type ${f.type==="sourcing"?"on":""}" data-k="type" data-v="sourcing">Sourcing</button>
+        <button class="chip type ${f.type==="audit"?"on":""}" data-k="type" data-v="audit">Audit</button>
+        <button class="chip result ${f.result==="pass"?"on":""}" data-k="result" data-v="pass">Pass</button>
+        <button class="chip result ${f.result==="fail"?"on":""}" data-k="result" data-v="fail">Fail</button>
+        <button class="chip leave ${f.leave||f.type==="leave"?"on":""}" data-k="leave" data-v="1">Annual leave</button>
+        <button class="chip warn ${f.conflicts?"on":""}" data-k="conflicts" data-v="1">Conflicts / overload</button>
+        <select class="chip ${f.customer!=="all"?"on":""}" id="custSel"><option value="all">All clients</option>${clients.map(c=>`<option value="${c}" ${f.customer===c?"selected":""}>${c}</option>`).join("")}</select>
+        <select class="chip ${f.factory!=="all"?"on":""}" id="facSel"><option value="all">All factories</option>${factories.map(c=>`<option value="${c}" ${f.factory===c?"selected":""}>${c}</option>`).join("")}</select>
+        <select class="chip ${f.category!=="all"?"on":""}" id="catSel"><option value="all">All categories</option>${cats.map(c=>`<option value="${c}" ${f.category===c?"selected":""}>${c}</option>`).join("")}</select>
+        <select class="chip ${f.country!=="all"?"on":""}" id="ctySel"><option value="all">All countries</option>${Object.entries(COUNTRY).map(([k,c])=>`<option value="${k}" ${f.country===k?"selected":""}>${c.name}</option>`).join("")}</select>
+      `;
+      wrap.querySelector("[data-reset]").onclick = () => {
+        f = { pic: "all", customer: "all", factory: "all", type: "all", result: "all", category: "all", country: "all", conflicts: false, leave: false };
+        hitDate = "";
+        render();
+      };
+      const dd = $("picDd");
+      const picBtn = $("picBtn");
+      if (picOn) {
+        const p = pic(f.pic);
+        picBtn.style.background = p.color;
+        picBtn.style.borderColor = p.color;
+        picBtn.style.color = "#fff";
+      }
+      picBtn.onclick = ev => {
+        ev.stopPropagation();
+        dd.classList.toggle("open");
+        if (dd.classList.contains("open")) setTimeout(() => $("picSearch").focus(), 0);
+      };
+      $("picSearch").oninput = e => {
+        const q = e.target.value.trim().toLowerCase();
+        $("picMenu").querySelectorAll(".pic-opt").forEach(opt => {
+          const name = (opt.dataset.name || "all pics");
+          opt.style.display = name.includes(q) || opt.dataset.v === "all" && "all pics".includes(q) ? "" : "none";
+        });
+      };
+      $("picSearch").onclick = ev => ev.stopPropagation();
+      $("picMenu").onclick = ev => ev.stopPropagation();
+      wrap.querySelectorAll("[data-k]").forEach(btn => {
+        btn.onclick = ev => {
+          ev.stopPropagation();
+          const k = btn.dataset.k, v = btn.dataset.v;
+          if (k === "conflicts") setFilter("conflicts", !f.conflicts);
+          else if (k === "leave") setFilter("leave", !f.leave);
+          else setFilter(k, v);
+        };
+      });
+      $("custSel").onchange = e => { f.customer = e.target.value; render(); };
+      $("facSel").onchange = e => { f.factory = e.target.value; render(); };
+      $("catSel").onchange = e => { f.category = e.target.value; render(); };
+      $("ctySel").onchange = e => { f.country = e.target.value; render(); };
+    }
+
+    function yearList() {
+      const fromJobs = JOBS.map(j => parse(j.date).getFullYear());
+      const set = new Set([view.y, 2025, 2026, 2027, ...fromJobs]);
+      return [...set].sort((a,b) => a - b);
+    }
+
+    function renderYearMenu() {
+      $("yearBtn").textContent = view.y;
+      $("yearMenu").innerHTML = yearList().map(y =>
+        `<button class="year-opt ${y===view.y?"on":""}" data-y="${y}">${y}</button>`
+      ).join("");
+      $("yearMenu").querySelectorAll("[data-y]").forEach(btn => {
+        btn.onclick = ev => {
+          ev.stopPropagation();
+          view.y = Number(btn.dataset.y);
+          yearMode = true;
+          $("yearDd").classList.remove("open");
+          render();
+        };
+      });
+    }
+
+    function renderCal() {
+      const cal = $("cal"); cal.innerHTML = "";
+      const first = new Date(view.y, view.m, 1);
+      const start = new Date(first); start.setDate(1 - mon0(first));
+      const shown = filteredMonth();
+      const allMonth = monthJobs();
+      const byAll = {}; allMonth.forEach(j => { (byAll[j.date] ||= []).push(j); });
+      const byShow = {}; shown.forEach(j => { (byShow[j.date] ||= []).push(j); });
+
+      for (let i = 0; i < 42; i++) {
+        const d = new Date(start); d.setDate(start.getDate() + i);
+        const key = iso(d.getFullYear(), d.getMonth(), d.getDate());
+        const out = d.getMonth() !== view.m;
+        const list = byShow[key] || [];
+        const meta = dayMeta(byAll[key] || []);
+        const cell = document.createElement("div");
+        cell.dataset.date = key;
+        cell.className = "day" + (out ? " out" : "") + (key === TODAY ? " today" : "") + (meta.warn && !out ? " conflict" : "") + (hitDate === key ? " hit" : "");
+        cell.innerHTML = `<div class="num">${d.getDate()}</div>`;
+        if (meta.warn && list.length) {
+          const t = document.createElement("div");
+          t.className = "job conflict-tag";
+          t.textContent = meta.overload && meta.conflict ? "Overload / conflict" : meta.overload ? "Overload" : "Conflict";
+          t.onclick = () => { f.conflicts = true; render(); };
+          cell.appendChild(t);
+        }
+        list.forEach(j => {
+          const p = pic(j.pic);
+          const el = document.createElement("div");
+          el.className = "job" + (j.type === "leave" ? " leave" : "");
+          if (j.type !== "leave") {
+            el.style.background = TINT[j.pic];
+            el.style.borderLeftColor = p.color;
+          }
+          const dur = j.days === 1 ? "1d" : "½d";
+          const stamp = j.result === "pass"
+            ? `<span class="stamp ok">✅ Pass</span>`
+            : j.result === "fail"
+              ? `<span class="stamp bad">❌ Fail</span>`
+              : j.result === "pending"
+                ? `<span class="stamp wait">⏳ Pending</span>`
+                : "";
+          const re = j.visit > 1 ? `<span class="re">(Re-inspect)</span>` : "";
+          el.innerHTML = j.type === "leave"
+            ? `<b>${p.name}</b><div class="row"><span class="ico">🌴</span> Annual leave</div>`
+            : `<b>${p.name} <span class="dur">(${dur})</span></b>
+               <div class="row"><span class="ico">🏭</span> ${j.factory} <span class="ico">👤</span> ${j.customer}${j.country && j.country !== "VN" ? ` · ${j.country}` : ""}</div>
+               <div class="row"><span class="ico">📌</span> ${j.type[0].toUpperCase()+j.type.slice(1)} | ${stamp} ${re}</div>`;
+          el.onclick = ev => {
+            ev.stopPropagation();
+            if (f.pic === j.pic) setFilter("customer", j.customer || "all");
+            else setFilter("pic", j.pic);
+          };
+          cell.appendChild(el);
+        });
+        cal.appendChild(cell);
+      }
+    }
+
+    function stats(jobs, baseDays = WORKDAYS) {
+      const map = Object.fromEntries(PEOPLE.map(p => [p.id, { days: 0, latest: {} }]));
+      jobs.filter(j => j.type !== "leave").forEach(j => {
+        const id = ensurePic(j.pic);
+        if (!map[id]) map[id] = { days: 0, latest: {} };
+        map[id].days += j.days;
+        const cur = map[id].latest[j.job];
+        if (!cur || j.visit >= cur.visit) map[id].latest[j.job] = j;
+      });
+      return PEOPLE.map(p => {
+        const s = map[p.id];
+        const closed = Object.values(s.latest).filter(j => j.result === "pass" || j.result === "fail");
+        const passed = closed.filter(j => j.result === "pass").length;
+        const rate = closed.length ? Math.round(passed / closed.length * 100) : null;
+        return { ...p, days: s.days, pct: Math.round(s.days / baseDays * 100), rate, closed: closed.length, passed };
+      }).sort((a,b) => b.days - a.days);
+    }
+
+    function rateClass(n) {
+      if (n == null) return "";
+      if (n >= 85) return "ok";
+      if (n >= 70) return "mid";
+      return "bad";
+    }
+
+    function renderBoard() {
+      const rows = stats(filteredScope(), yearMode ? YEAR_DAYS : WORKDAYS).filter(p => p.role !== "manager");
+      $("board").innerHTML = `
+        <table class="lb">
+          <thead><tr><th>Staff</th><th>Days (Occ.)</th><th>Pass Rate</th></tr></thead>
+          <tbody>
+            ${rows.map(r => `
+              <tr data-pic="${r.id}">
+                <td class="name">${r.name}</td>
+                <td class="load">${fmt(r.days)}d (${r.pct}%)</td>
+                <td class="${rateClass(r.rate)}" title="${r.rate == null ? "no closed jobs" : r.passed + " pass / " + r.closed + " closed jobs"}">${r.rate == null ? "—" : r.rate + "%"}</td>
+              </tr>`).join("")}
+          </tbody>
+        </table>`;
+      $("board").querySelectorAll("tr[data-pic]").forEach(el => {
+        el.onclick = () => setFilter("pic", el.dataset.pic);
+      });
+
+      const W = 360, H = 240, padL = 28, padR = 8, padT = 28, padB = 28;
+      const innerW = W - padL - padR, innerH = H - padT - padB;
+      const maxY = 20;
+      const n = rows.length;
+      const gap = 14;
+      const bw = (innerW - gap * (n + 1)) / n;
+      let grid = "";
+      for (let y = 0; y <= maxY; y += 5) {
+        const yy = padT + innerH - (y / maxY) * innerH;
+        grid += `<line x1="${padL}" x2="${W-padR}" y1="${yy}" y2="${yy}" stroke="#E2E8F0"/>
+          <text x="${padL-6}" y="${yy+4}" text-anchor="end" font-size="13" font-weight="700" fill="#64748B">${y}</text>`;
+      }
+      const bars = rows.map((r, i) => {
+        const h = (r.days / maxY) * innerH;
+        const x = padL + gap + i * (bw + gap);
+        const y = padT + innerH - h;
+        return `<rect x="${x}" y="${y}" width="${bw}" height="${h}" rx="6" fill="${r.color}" data-pic="${r.id}"/>
+          <text x="${x + bw/2}" y="${y - 8}" text-anchor="middle" font-size="16" font-weight="800" fill="#0F172A">${fmt(r.days)}d</text>
+          <text x="${x + bw/2}" y="${H - 6}" text-anchor="middle" font-size="13" font-weight="700" fill="#334155">${r.name}</text>`;
+      }).join("");
+      $("bars").innerHTML = grid + bars;
+      $("bars").querySelectorAll("[data-pic]").forEach(el => {
+        el.style.cursor = "pointer";
+        el.onclick = () => setFilter("pic", el.dataset.pic);
+      });
+      const top = rows[0];
+      $("barBig").innerHTML = top ? `${fmt(top.days)}<small>${top.name} · most days</small>` : "";
+    }
+
+    function polar(cx, cy, r, deg) {
+      const a = (deg - 90) * Math.PI / 180;
+      return [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+    }
+    function arc(cx, cy, r, a0, a1) {
+      const [x0,y0] = polar(cx,cy,r,a0);
+      const [x1,y1] = polar(cx,cy,r,a1);
+      const large = (a1 - a0) > 180 ? 1 : 0;
+      return `M ${x0} ${y0} A ${r} ${r} 0 ${large} 1 ${x1} ${y1}`;
+    }
+
+    function groupJobs(jobs, key) {
+      const bag = {};
+      let inline = 0, fin = 0;
+      jobs.forEach(j => {
+        const name = j[key];
+        if (!name) return;
+        bag[name] ||= { days: 0, inline: 0, final: 0 };
+        bag[name].days += j.days;
+        if (j.type === "inline") { bag[name].inline += j.days; inline += j.days; }
+        else { bag[name].final += j.days; fin += j.days; }
+      });
+      const entries = Object.entries(bag).sort((a,b) => b[1].days - a[1].days);
+      const total = entries.reduce((s,e) => s + e[1].days, 0);
+      return { entries, total, inline, fin };
+    }
+
+    function paintDonut(svgId, legendId, data, colorOf, onPick, unit, compact) {
+      const { entries, total } = data;
+      const cx = 140, cy = 140, R = compact ? 122 : 118, r = compact ? 34 : 32;
+      const pctSize = compact ? 20 : 22;
+      const daySize = compact ? 13 : 14;
+      const centerSize = compact ? 18 : 20;
+      const unitSize = compact ? 10 : 11;
+      let acc = 0;
+      let paths = `<circle cx="${cx}" cy="${cy}" r="${(R+r)/2}" fill="none" stroke="#E2E8F0" stroke-width="${R-r}"/>`;
+      if (total) {
+        paths = "";
+        entries.forEach(([name, v]) => {
+          const frac = v.days / total;
+          const a0 = acc * 360;
+          const a1 = (acc + frac) * 360;
+          acc += frac;
+          const col = colorOf(name);
+          const mid = (a0 + a1) / 2;
+          const [lx, ly] = polar(cx, cy, (R + r) / 2, mid);
+          const pct = Math.round(frac * 100);
+          paths += `<path d="${arc(cx,cy,R,a0,a1)} L ${polar(cx,cy,r,a1).join(" ")} ${arc(cx,cy,r,a1,a0).replace("M","L")} Z" fill="${col}" data-k="${name}" style="cursor:pointer"/>`;
+          if (pct >= 7) {
+            paths += `<text x="${lx}" y="${ly-3}" text-anchor="middle" font-size="${pctSize}" font-weight="800" fill="#fff">${pct}%</text>
+              <text x="${lx}" y="${ly+14}" text-anchor="middle" font-size="${daySize}" font-weight="700" fill="rgba(255,255,255,.95)">${fmt(v.days)}${unit === "jobs" ? "" : "d"}</text>`;
+          }
+        });
+      }
+      paths += `<text x="${cx}" y="${cy-6}" text-anchor="middle" font-size="${centerSize}" font-family="Newsreader" font-weight="700" fill="#0F172A">${fmt(total)}</text>
+        <text x="${cx}" y="${cy+16}" text-anchor="middle" font-size="${unitSize}" font-weight="700" fill="#64748B">${unit || "inspect days"}</text>`;
+      $(svgId).innerHTML = paths;
+      $(svgId).querySelectorAll("[data-k]").forEach(el => {
+        el.onclick = () => onPick(el.dataset.k);
+      });
+      const suffix = unit === "jobs" ? "" : "d";
+      $(legendId).innerHTML = entries.map(([name, v]) => {
+        const pct = total ? Math.round(v.days / total * 100) : 0;
+        return `<span data-k="${name}"><i class="dot" style="background:${colorOf(name)}"></i>${name} · ${fmt(v.days)}${suffix} · ${pct}%</span>`;
+      }).join("") || `<span style="color:var(--muted)">No jobs in filter</span>`;
+      $(legendId).querySelectorAll("[data-k]").forEach(el => {
+        el.onclick = () => onPick(el.dataset.k);
+      });
+    }
+
+    function paintRing(svgId, pctId, pct, color) {
+      const r = 24, c = 2 * Math.PI * r;
+      const dash = Math.max(0, Math.min(100, pct || 0)) / 100 * c;
+      $(svgId).innerHTML = `
+        <circle cx="32" cy="32" r="${r}" fill="none" stroke="#E2E8F0" stroke-width="7"/>
+        <circle cx="32" cy="32" r="${r}" fill="none" stroke="${color}" stroke-width="7"
+          stroke-linecap="round" stroke-dasharray="${dash} ${c}" transform="rotate(-90 32 32)"/>`;
+      $(pctId).textContent = pct == null ? "—" : pct + "%";
+    }
+
+    function renderPfRings() {
+      const { entries, total } = closedResults(filteredScope());
+      const bag = { Pass: 0, Fail: 0 };
+      entries.forEach(([name, v]) => { bag[name] = v.days; });
+      const passPct = total ? Math.round(bag.Pass / total * 100) : null;
+      const failPct = total ? Math.round(bag.Fail / total * 100) : null;
+      paintRing("passRing", "passPct", passPct, "#22C55E");
+      paintRing("failRing", "failPct", failPct, "#F43F5E");
+      $("passKpi").classList.toggle("on", f.result === "pass");
+      $("failKpi").classList.toggle("on", f.result === "fail");
+      $("passKpi").title = total ? `${bag.Pass} pass / ${total} closed` : "no closed jobs";
+      $("failKpi").title = total ? `${bag.Fail} fail / ${total} closed` : "no closed jobs";
+    }
+
+    function closedResults(jobs) {
+      const latest = {};
+      jobs.filter(j => j.type !== "leave").forEach(j => {
+        const cur = latest[j.job];
+        if (!cur || j.visit >= cur.visit) latest[j.job] = j;
+      });
+      const bag = { Pass: 0, Fail: 0 };
+      Object.values(latest).forEach(j => {
+        if (j.result === "pass") bag.Pass += 1;
+        if (j.result === "fail") bag.Fail += 1;
+      });
+      const entries = Object.entries(bag).filter(([, n]) => n).map(([name, n]) => [name, { days: n }]);
+      const total = entries.reduce((s, e) => s + e[1].days, 0);
+      return { entries, total };
+    }
+
+    function renderDonut() {
+      const jobs = filteredScope().filter(j => j.type !== "leave");
+      const factories = [...new Set(jobs.map(j => j.factory).filter(Boolean))];
+      paintDonut("factoryDonut", "factoryLegend",
+        groupJobs(jobs, "factory"),
+        name => FACTORY_COLOR[factories.indexOf(name) % FACTORY_COLOR.length],
+        name => setFilter("factory", name));
+      paintDonut("donut", "legend",
+        groupJobs(jobs, "customer"),
+        name => CLIENT_COLOR[name] || "#94A3B8",
+        name => setFilter("customer", name));
+      const typed = groupJobs(jobs, "type");
+      typed.entries = typed.entries.map(([k, v]) => [k[0].toUpperCase() + k.slice(1), v]);
+      paintDonut("typeDonut", "typeLegend",
+        typed,
+        name => TYPE_COLOR[name.toLowerCase()] || "#94A3B8",
+        name => setFilter("type", name.toLowerCase()));
+      paintDonut("resultDonut", "resultLegend",
+        closedResults(jobs),
+        name => RESULT_COLOR[name] || "#94A3B8",
+        name => setFilter("result", name.toLowerCase()),
+        "jobs");
+      const srcJobs = jobs.filter(j => j.type === "sourcing");
+      const srcFac = [...new Set(srcJobs.map(j => j.factory).filter(Boolean))];
+      paintDonut("sourcingDonut", "sourcingLegend",
+        groupJobs(srcJobs, "factory"),
+        name => SOURCING_COLOR[srcFac.indexOf(name) % SOURCING_COLOR.length],
+        name => { f.type = "sourcing"; setFilter("factory", name); },
+        undefined, true);
+      const audJobs = jobs.filter(j => j.type === "audit");
+      const audFac = [...new Set(audJobs.map(j => j.factory).filter(Boolean))];
+      paintDonut("auditDonut", "auditLegend",
+        groupJobs(audJobs, "factory"),
+        name => AUDIT_COLOR[audFac.indexOf(name) % AUDIT_COLOR.length],
+        name => { f.type = "audit"; setFilter("factory", name); },
+        undefined, true);
+    }
+
+    function renderAlerts() {
+      const by = {};
+      scopeJobs().forEach(j => { (by[j.date] ||= []).push(j); });
+      const items = [];
+      Object.entries(by).forEach(([date, list]) => {
+        const m = dayMeta(list);
+        if (m.overload) items.push({ cls: "o", date, t: `${date} — overload (${[...new Set(m.inspect.map(j=>pic(j.pic).name))].join(", ")})` });
+        if (m.conflict && !m.overload) items.push({ cls: "c", date, t: `${date} — conflict (same PIC twice or weekend inspect)` });
+        list.filter(j => j.type === "leave").forEach(j => items.push({ cls: "l", date, t: `${date} — ${pic(j.pic).name} on annual leave` }));
+      });
+      const loadBase = yearMode ? YEAR_DAYS : WORKDAYS;
+      const loadCut = yearMode ? 192 : 16;
+      stats(scopeJobs(), loadBase).forEach(p => {
+        if (p.days > loadCut) items.push({ cls: "o", date: "", t: `${p.name} at ${p.pct}% load (>${loadCut} / ${loadBase} days)` });
+      });
+      $("alerts").innerHTML = items.length
+        ? items.map(i => `<div class="item ${i.cls}${hitDate && i.date===hitDate?" on":""}" data-date="${i.date || ""}">${i.t}</div>`).join("")
+        : `<div class="item" style="background:#F1F5F9;color:var(--muted)">No alerts this month.</div>`;
+      $("alerts").querySelectorAll("[data-date]").forEach(el => {
+        el.onclick = () => {
+          const d = el.dataset.date;
+          if (!d) return;
+          hitDate = hitDate === d ? "" : d;
+          document.querySelectorAll(".day.hit").forEach(c => c.classList.remove("hit"));
+          $("alerts").querySelectorAll(".item.on").forEach(n => n.classList.remove("on"));
+          if (hitDate) {
+            el.classList.add("on");
+            const cell = document.querySelector(`.day[data-date="${hitDate}"]`);
+            if (cell) {
+              cell.classList.add("hit");
+              cell.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+          }
+        };
+      });
+    }
+
+    function renderCatBars() {
+      const jobs = filteredScope().filter(j => j.type === "inline" || j.type === "final");
+      const bag = {};
+      jobs.forEach(j => {
+        if (!j.category) return;
+        bag[j.category] ||= { inline: 0, final: 0 };
+        bag[j.category][j.type] += j.days;
+      });
+      const rows = Object.entries(bag)
+        .map(([name, v]) => ({ name, ...v, tot: v.inline + v.final }))
+        .sort((a, b) => b.tot - a.tot);
+      const max = Math.max(1, ...rows.map(r => r.tot));
+      $("catBars").innerHTML = rows.length
+        ? rows.map(r => {
+            const iw = r.tot ? (r.inline / max * 100) : 0;
+            const fw = r.tot ? (r.final / max * 100) : 0;
+            const iLab = r.inline ? `${fmt(r.inline)}d` : "";
+            const fLab = r.final ? `${fmt(r.final)}d` : "";
+            return `<div class="cat-row" data-cat="${r.name}">
+              <div class="lab">${r.name}</div>
+              <div class="cat-track">
+                <div class="cat-seg inline" style="width:${iw}%">${iLab}</div>
+                <div class="cat-seg final" style="width:${fw}%">${fLab}</div>
+              </div>
+              <div class="cat-tot">${fmt(r.tot)}d</div>
+            </div>`;
+          }).join("")
+        : `<div style="color:var(--muted);font-size:12px">No inline / final days in filter</div>`;
+      $("catBars").querySelectorAll("[data-cat]").forEach(el => {
+        el.onclick = () => setFilter("category", el.dataset.cat);
+      });
+    }
+
+    function renderMap() {
+      const jobs = filteredScope().filter(j => j.type !== "leave" && j.country);
+      const bag = {};
+      jobs.forEach(j => { bag[j.country] = (bag[j.country] || 0) + j.days; });
+      const max = Math.max(1, ...Object.values(bag), 1);
+      const land = `
+        <rect x="0" y="0" width="420" height="360" fill="#E8F4FC"/>
+        <path d="M200 22 C250 8 320 10 375 32 C405 52 412 88 395 118 C378 145 340 152 310 140 C285 155 255 148 235 128 C215 108 195 85 188 55 C185 35 190 25 200 22Z" fill="#FEE2E2" stroke="#FECACA" stroke-width="1.2"/>
+        <path d="M48 88 C78 58 125 62 148 95 C162 122 168 155 158 188 C148 220 128 248 108 255 C92 248 78 220 68 188 C52 155 38 125 42 105 C44 95 44 90 48 88Z" fill="#FEF3C7" stroke="#FDE68A" stroke-width="1.2"/>
+        <path d="M195 115 C225 100 255 115 258 145 C256 165 242 178 230 188 C222 215 216 242 222 258 C210 262 202 245 204 215 C200 188 185 168 182 145 C180 125 185 115 195 115Z" fill="#DCFCE7" stroke="#BBF7D0" stroke-width="1.2"/>
+        <path d="M278 108 C300 112 318 130 316 158 C312 188 322 218 338 248 C342 262 328 270 312 258 C298 240 288 215 286 188 C284 158 270 128 278 108Z" fill="#E0F2FE" stroke="#BAE6FD" stroke-width="1.2"/>
+        <path d="M248 168 C272 160 288 172 286 192 C280 208 260 210 246 198 C238 186 238 174 248 168Z" fill="#FFEDD5" stroke="#FED7AA" stroke-width="1.2"/>
+        <path d="M208 250 C230 244 248 254 246 274 C240 292 220 294 208 278 C202 266 200 254 208 250Z" fill="#EDE9FE" stroke="#DDD6FE" stroke-width="1.2"/>
+        <path d="M278 238 C305 228 328 242 322 262 C312 276 290 274 276 258 C270 248 272 240 278 238Z" fill="#EDE9FE" stroke="#DDD6FE" stroke-width="1.2"/>
+        <path d="M175 272 C210 262 238 278 232 302 C220 322 188 324 168 306 C158 292 160 278 175 272Z" fill="#CCFBF1" stroke="#99F6E4" stroke-width="1.2"/>
+        <path d="M238 312 C280 304 330 310 355 322 C348 334 300 340 250 336 C232 332 228 318 238 312Z" fill="#CCFBF1" stroke="#99F6E4" stroke-width="1.2"/>
+        <path d="M268 262 C310 250 348 268 342 292 C328 312 292 308 270 288 C262 276 262 266 268 262Z" fill="#CCFBF1" stroke="#99F6E4" stroke-width="1.2"/>
+        <text x="312" y="78" text-anchor="middle" font-size="12" font-weight="800" fill="#9F1239">CN</text>
+        <text x="92" y="155" text-anchor="middle" font-size="12" font-weight="800" fill="#B45309">IN</text>
+        <text x="218" y="148" text-anchor="middle" font-size="11" font-weight="800" fill="#15803D">TH</text>
+        <text x="318" y="175" text-anchor="middle" font-size="11" font-weight="800" fill="#0369A1">VN</text>
+        <text x="266" y="192" text-anchor="middle" font-size="10" font-weight="800" fill="#C2410C">KH</text>
+        <text x="226" y="272" text-anchor="middle" font-size="10" font-weight="800" fill="#6D28D9">MY</text>
+        <text x="290" y="328" text-anchor="middle" font-size="11" font-weight="800" fill="#0F766E">ID</text>`;
+      const bubbles = Object.keys(COUNTRY).map(code => {
+        const c = COUNTRY[code];
+        const days = bag[code] || 0;
+        const r = days ? 10 + (days / max) * 22 : 7;
+        const on = f.country === code;
+        const fill = days ? c.color : "#CBD5E1";
+        return `<g data-cty="${code}" style="cursor:pointer">
+          <circle cx="${c.x}" cy="${c.y}" r="${r}" fill="${fill}" fill-opacity="${days ? (on ? .95 : .72) : .25}" stroke="${on ? "#0F172A" : "#fff"}" stroke-width="${on ? 3 : 2}"/>
+          ${days ? `<text x="${c.x}" y="${c.y + 4}" text-anchor="middle" font-size="11" font-weight="800" fill="#fff">${fmt(days)}d</text>` : ""}
+        </g>`;
+      }).join("");
+      $("seaMap").innerHTML = land + bubbles;
+      $("seaMap").querySelectorAll("[data-cty]").forEach(el => {
+        el.onclick = () => setFilter("country", el.dataset.cty);
+      });
+      $("mapLegend").innerHTML = Object.entries(COUNTRY).map(([code, c]) => {
+        const days = bag[code] || 0;
+        return `<span class="${f.country===code?"on":""}" data-cty="${code}"><i class="dot" style="background:${c.color}"></i>${c.name} · ${fmt(days)}d</span>`;
+      }).join("");
+      $("mapLegend").querySelectorAll("[data-cty]").forEach(el => {
+        el.onclick = () => setFilter("country", el.dataset.cty);
+      });
+    }
+
+    function applyMonthTheme() {
+      const t = MONTH_THEME[view.m];
+      const root = document.documentElement.style;
+      root.setProperty("--month", t.month);
+      root.setProperty("--month-ink", t.ink);
+      root.setProperty("--month-tint", t.tint);
+    }
+
+    function monthRollup(jobs, m) {
+      const list = jobs.filter(j => parse(j.date).getMonth() === m);
+      const inspect = list.filter(j => j.type !== "leave");
+      const days = inspect.reduce((s, j) => s + j.days, 0);
+      const latest = {};
+      inspect.forEach(j => {
+        const cur = latest[j.job];
+        if (!cur || j.visit >= cur.visit) latest[j.job] = j;
+      });
+      const closed = Object.values(latest).filter(j => j.result === "pass" || j.result === "fail");
+      const passed = closed.filter(j => j.result === "pass").length;
+      const types = { inline: 0, final: 0, sourcing: 0, audit: 0 };
+      inspect.forEach(j => { if (types[j.type] != null) types[j.type] += j.days; });
+      return { m, days, jobs: Object.keys(latest).length, closed: closed.length, passed, rate: closed.length ? Math.round(passed / closed.length * 100) : null, leave: list.filter(j => j.type === "leave").length, ...types };
+    }
+
+    function renderYearSummary() {
+      $("yearTitle").textContent = view.y;
+      const jobs = filteredScope();
+      const inspect = jobs.filter(j => j.type !== "leave");
+      const days = inspect.reduce((s, j) => s + j.days, 0);
+      const latest = {};
+      inspect.forEach(j => {
+        const cur = latest[j.job];
+        if (!cur || j.visit >= cur.visit) latest[j.job] = j;
+      });
+      const closed = Object.values(latest).filter(j => j.result === "pass" || j.result === "fail");
+      const passed = closed.filter(j => j.result === "pass").length;
+      const leave = jobs.filter(j => j.type === "leave").length;
+      $("yearKpis").innerHTML = `
+        <div class="kpi"><em>Inspect days</em><b>${fmt(days)}</b></div>
+        <div class="kpi"><em>Closed jobs</em><b>${closed.length}</b></div>
+        <div class="kpi"><em>Pass %</em><b>${closed.length ? Math.round(passed / closed.length * 100) + "%" : "—"}</b></div>
+        <div class="kpi"><em>Re-inspect</em><b>${inspect.filter(j => j.visit > 1).length}</b></div>
+        <div class="kpi"><em>Leave days</em><b>${leave}</b></div>`;
+      const months = MONTHS.map((_, m) => monthRollup(jobs, m));
+      $("yearMonths").innerHTML = `
+        <table class="ys">
+          <thead><tr>
+            <th>Month</th><th class="num">Days</th><th class="num">Inline</th><th class="num">Final</th>
+            <th class="num">Sourcing</th><th class="num">Audit</th><th class="num">Jobs</th><th class="num">Pass %</th>
+          </tr></thead>
+          <tbody>
+            ${months.map(r => `
+              <tr class="click" data-m="${r.m}">
+                <td class="name">${SHORT[r.m]}</td>
+                <td class="num">${fmt(r.days)}</td>
+                <td class="num">${fmt(r.inline)}</td>
+                <td class="num">${fmt(r.final)}</td>
+                <td class="num">${fmt(r.sourcing)}</td>
+                <td class="num">${fmt(r.audit)}</td>
+                <td class="num">${r.jobs}</td>
+                <td class="num ${rateClass(r.rate)}">${r.rate == null ? "—" : r.rate + "%"}</td>
+              </tr>`).join("")}
+            <tr>
+              <td class="name">Year</td>
+              <td class="num">${fmt(days)}</td>
+              <td class="num">${fmt(inspect.filter(j=>j.type==="inline").reduce((s,j)=>s+j.days,0))}</td>
+              <td class="num">${fmt(inspect.filter(j=>j.type==="final").reduce((s,j)=>s+j.days,0))}</td>
+              <td class="num">${fmt(inspect.filter(j=>j.type==="sourcing").reduce((s,j)=>s+j.days,0))}</td>
+              <td class="num">${fmt(inspect.filter(j=>j.type==="audit").reduce((s,j)=>s+j.days,0))}</td>
+              <td class="num">${Object.keys(latest).length}</td>
+              <td class="num ${rateClass(closed.length ? Math.round(passed / closed.length * 100) : null)}">${closed.length ? Math.round(passed / closed.length * 100) + "%" : "—"}</td>
+            </tr>
+          </tbody>
+        </table>`;
+      $("yearMonths").querySelectorAll("[data-m]").forEach(el => {
+        el.onclick = () => { view.m = Number(el.dataset.m); yearMode = false; render(); };
+      });
+      const pics = stats(jobs, YEAR_DAYS);
+      $("yearPics").innerHTML = `
+        <table class="ys">
+          <thead><tr><th>PIC</th><th class="num">Days</th><th class="num">Occ. %</th><th class="num">Closed</th><th class="num">Pass %</th></tr></thead>
+          <tbody>
+            ${pics.map(r => `
+              <tr class="click" data-pic="${r.id}">
+                <td class="name">${r.name}</td>
+                <td class="num">${fmt(r.days)}</td>
+                <td class="num">${r.pct}%</td>
+                <td class="num">${r.closed}</td>
+                <td class="num ${rateClass(r.rate)}">${r.rate == null ? "—" : r.rate + "%"}</td>
+              </tr>`).join("")}
+          </tbody>
+        </table>`;
+      $("yearPics").querySelectorAll("[data-pic]").forEach(el => {
+        el.onclick = () => setFilter("pic", el.dataset.pic);
+      });
+    }
+
+    function render() {
+      document.body.classList.toggle("year-mode", yearMode);
+      applyMonthTheme();
+      $("monthName").textContent = yearMode ? "Year" : MONTHS[view.m];
+      $("yearName").textContent = view.y;
+      const h1 = document.querySelector("h1");
+      if (h1) h1.childNodes[0].textContent = yearMode ? "Yearly Summary — " : "Full Month Calendar — ";
+      renderYearMenu();
+      $("monthBtn").textContent = yearMode ? "Year" : SHORT[view.m];
+      renderFilters();
+      if (yearMode) renderYearSummary();
+      else renderCal();
+      $("yearBtn").title = yearMode ? "Pick another year" : "Open yearly summary";
+      renderBoard();
+      renderDonut();
+      renderPfRings();
+      renderCatBars();
+      renderAlerts();
+      renderMap();
+    }
+
+    document.addEventListener("click", () => {
+      const picDd = $("picDd");
+      const yearDd = $("yearDd");
+      if (picDd) picDd.classList.remove("open");
+      if (yearDd) yearDd.classList.remove("open");
+    });
+
+    $("prev").onclick = () => {
+      if (yearMode) { view.y--; render(); return; }
+      view.m--; if (view.m < 0) { view.m = 11; view.y--; } render();
+    };
+    $("next").onclick = () => {
+      if (yearMode) { view.y++; render(); return; }
+      view.m++; if (view.m > 11) { view.m = 0; view.y++; } render();
+    };
+    $("monthBtn").onclick = () => { yearMode = false; view.m = 8; render(); };
+    $("yearBtn").onclick = ev => {
+      ev.stopPropagation();
+      if (yearMode) {
+        $("yearDd").classList.toggle("open");
+      } else {
+        yearMode = true;
+        render();
+      }
+    };
+    $("yearMenu").onclick = ev => ev.stopPropagation();
+    $("yearBack").onclick = () => { yearMode = false; render(); };
+    $("passKpi").onclick = () => setFilter("result", "pass");
+    $("failKpi").onclick = () => setFilter("result", "fail");
+    loadJobs().then(render);
+  </script>
+</body>
+</html>

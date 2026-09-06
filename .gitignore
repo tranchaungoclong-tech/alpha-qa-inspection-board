@@ -1,0 +1,11 @@
+~$*.xlsx
+*.xlsx
+node_modules/
+submit-*.mjs
+build-sheet.mjs
+jobs-*.csv
+index-v*.html
+v*-revision.md
+VERSIONS.md
+.DS_Store
+Thumbs.db
