@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="QA Board" />
-  <title>Alpha QA — Inspection Board v35</title>
+  <title>Alpha QA — Inspection Board v36</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon-192.png" type="image/png" />
   <link rel="apple-touch-icon" href="icon-180.png" />
@@ -118,35 +118,6 @@
     }
     .alerts .item { cursor: pointer; }
     .alerts .item.on { outline: 2px solid #EAB308; }
-    .who-bar { display: none !important; }
-    .who-bar-inner {
-      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-      font-size: 12px; color: var(--muted);
-    }
-    .who-bar b { color: var(--ink); }
-    .who-bar select {
-      border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px;
-      font: 700 13px "IBM Plex Sans", sans-serif; background: #fff; color: var(--ink);
-    }
-    .who-bar button {
-      border: 1px solid var(--line); background: #fff; border-radius: 8px;
-      padding: 6px 10px; font: 700 12px "IBM Plex Sans", sans-serif; cursor: pointer;
-    }
-    .who-bar button.on { background: var(--ink); color: #fff; border-color: var(--ink); }
-    .who-note { font-size: 11px; color: var(--muted); }
-    .toast-stack {
-      position: fixed; z-index: 80; right: 12px; bottom: 12px;
-      display: flex; flex-direction: column; gap: 8px;
-      max-width: min(360px, calc(100vw - 24px));
-    }
-    .toast {
-      background: #0F172A; color: #fff; border-radius: 12px;
-      padding: 12px 14px; box-shadow: var(--shadow); cursor: pointer;
-    }
-    .toast .t-pic { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #93C5FD; font-weight: 700; }
-    .toast .t-msg { font-weight: 700; margin-top: 2px; font-size: 13px; }
-    .dot-live { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #22C55E; margin-right: 4px; }
-    .dot-live.off { background: #F59E0B; }
     .pic-dd { position: relative; }
     .pic-menu {
       display: none; position: absolute; z-index: 20; top: calc(100% + 6px); left: 0;
@@ -500,9 +471,6 @@
       .card h2 { font-size: 13px; margin-bottom: 8px; padding-bottom: 6px; }
       .day { cursor: pointer; }
       .day-pop-card { width: 100%; }
-      .who-bar { font-size: 12px; }
-      .who-bar select { font-size: 16px; min-height: 40px; }
-      .toast-stack { left: 8px; right: 8px; bottom: max(12px, env(safe-area-inset-bottom)); max-width: none; }
     }
   </style>
 </head>
@@ -511,7 +479,7 @@
     <header>
       <div>
         <h1>Full Month Calendar — <span class="month-name" id="monthName">September</span> <span class="year-name" id="yearName">2026</span></h1>
-        <div class="sub">v35 · Standard: <b>20 working days / month</b> · data: <b id="dataSrc">demo</b> · click <b>Year</b> for yearly summary</div>
+        <div class="sub">v36 · Standard: <b>20 working days / month</b> · data: <b id="dataSrc">demo</b> · click <b>Year</b> for yearly summary</div>
       </div>
       <div class="head-right">
         <div class="pf-kpis">
@@ -542,7 +510,6 @@
       </div>
     </header>
 
-    <div class="who-bar" id="whoBar"></div>
     <div class="filters" id="filters"></div>
 
     <div class="grid">
@@ -652,9 +619,8 @@
         </div>
       </div>
     </div>
-    <footer>v35. Tap result → droplist Pass / Fail / Pending. Version log on the server.</footer>
+    <footer>v36. Tap result → droplist Pass / Fail / Pending.</footer>
   </div>
-  <div class="toast-stack" id="toastStack"></div>
   <div class="day-pop" id="dayPop">
     <div class="day-pop-card" role="dialog" aria-modal="true">
       <div class="day-pop-head">
@@ -671,7 +637,7 @@
     <button type="button" data-v="pending">⏳ Pending</button>
   </div>
 
-  <script src="sheet-config.js?v=31b"></script>
+  <script src="sheet-config.js?v=36"></script>
   <script>
     const PEOPLE = [
       { id: "philip", name: "Philip", color: "#FB7185" },
@@ -786,15 +752,6 @@
       const get = t => parts.find(p => p.type === t).value;
       return { date: `${get("year")}-${get("month")}-${get("day")}`, hour: Number(get("hour")), minute: Number(get("minute")) };
     }
-    function pastEvening(n) {
-      const t = n || vnNow();
-      return t.hour > 20 || (t.hour === 20 && t.minute >= 10);
-    }
-    function addDays(isoDate, n) {
-      const [y, m, d] = isoDate.split("-").map(Number);
-      const dt = new Date(Date.UTC(y, m - 1, d + n));
-      return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, "0")}-${String(dt.getUTCDate()).padStart(2, "0")}`;
-    }
     const TODAY = vnNow().date;
     const todayParts = TODAY.split("-").map(Number);
     let view = { y: todayParts[0], m: todayParts[1] - 1 };
@@ -803,15 +760,6 @@
     let hitDate = "";
     const LS_CSV = "qa-board-csv";
     const LS_CSV_AT = "qa-board-csv-at";
-    const LS_WHO = "qa-board-who";
-    const LS_NOTIFY = "qa-board-notify";
-    const LS_SEEN = "qa-board-seen";
-    const LS_EVE = "qa-board-evening";
-    let whoAmI = "";
-    try { whoAmI = localStorage.getItem(LS_WHO) || ""; } catch (e) { whoAmI = ""; }
-    let notifyOn = false;
-    try { notifyOn = localStorage.getItem(LS_NOTIFY) === "1"; } catch (e) { notifyOn = false; }
-    let eveningTimer = 0;
 
     const $ = id => document.getElementById(id);
     const pic = id => PEOPLE.find(p => p.id === id);
@@ -949,15 +897,10 @@
       });
     }
     async function loadResultOverlays() {
-      const base = pushBase();
-      if (!base) return;
       try {
-        const r = await fetch(base + "/results", { headers: { "Bypass-Tunnel-Reminder": "true" } });
-        if (!r.ok) return;
-        const data = await r.json();
-        resultOverlays = data.overlays || {};
+        resultOverlays = JSON.parse(localStorage.getItem("qa-board-results") || "{}");
         applyResultOverlays();
-      } catch (e) {}
+      } catch (e) { resultOverlays = {}; }
     }
     let resultPickJob = null;
     let pendingDayKey = "";
@@ -1004,26 +947,10 @@
       const key = jobKey(j);
       const from = j.result || "";
       j.result = next;
-      const by = whoAmI ? (pic(whoAmI) ? pic(whoAmI).name : whoAmI) : "staff";
-      const base = pushBase();
-      if (base) {
-        try {
-          const r = await fetch(base + "/result", {
-            method: "POST",
-            headers: { "content-type": "application/json", "Bypass-Tunnel-Reminder": "true" },
-            body: JSON.stringify({ key, result: next, from, by })
-          });
-          if (r.ok) {
-            const data = await r.json();
-            resultOverlays[key] = data.overlay;
-          }
-        } catch (e) {}
-      } else {
-        const hist = (resultOverlays[key] && resultOverlays[key].history) || [];
-        hist.push({ at: new Date().toISOString(), by, from, to: next });
-        resultOverlays[key] = { result: next, history: hist };
-        try { localStorage.setItem("qa-board-results", JSON.stringify(resultOverlays)); } catch (e) {}
-      }
+      const hist = (resultOverlays[key] && resultOverlays[key].history) || [];
+      hist.push({ at: new Date().toISOString(), by: "staff", from, to: next });
+      resultOverlays[key] = { result: next, history: hist };
+      try { localStorage.setItem("qa-board-results", JSON.stringify(resultOverlays)); } catch (e) {}
       render();
     }
     function cachedCsv() {
@@ -1037,12 +964,6 @@
     }
     function jobKey(j) {
       return [j.date, j.pic, j.factory, j.type, j.job, j.visit].join("|");
-    }
-    function readSeen() {
-      try { return JSON.parse(localStorage.getItem(LS_SEEN) || "[]"); } catch (e) { return []; }
-    }
-    function writeSeen(keys) {
-      try { localStorage.setItem(LS_SEEN, JSON.stringify(keys.slice(-400))); } catch (e) {}
     }
     async function loadJobs() {
       const src = $("dataSrc");
@@ -1058,7 +979,6 @@
         const text = await res.text();
         applyCsv(text, "live Sheet");
         saveCsvCache(text);
-        maybeNotifyNewJobs();
       } catch (err) {
         const cached = cachedCsv();
         if (cached) {
@@ -1839,169 +1759,6 @@
       });
     }
 
-    function tomorrowJobsFor(picId, day) {
-      return JOBS.filter(j => j.pic === picId && j.date === day);
-    }
-    function tomorrowLine(list, day) {
-      if (!list.length) return `Tomorrow ${day}: no inspect on the sheet.`;
-      const bits = list.map(j => j.type === "leave" ? "leave" : `${j.factory || "factory"} · ${j.type}${j.customer ? " · " + j.customer : ""}`);
-      return `Tomorrow ${day}: ${bits.join(" · ")}`;
-    }
-    function fireTomorrowReminder(force) {
-      if (!whoAmI || !notifyOn) return;
-      const today = vnNow().date;
-      const day = addDays(today, 1);
-      try {
-        if (!force && localStorage.getItem(LS_EVE) === today) return;
-        localStorage.setItem(LS_EVE, today);
-      } catch (e) {}
-      const list = tomorrowJobsFor(whoAmI, day);
-      const t = tomorrowLine(list, day);
-      showToast({ pic: whoAmI, date: day, t });
-      if ("Notification" in window && Notification.permission === "granted") {
-        try { new Notification("QA Board — tomorrow", { body: t, data: { date: day } }); } catch (e) {}
-      }
-    }
-    function scheduleEveningWatch() {
-      if (eveningTimer) clearInterval(eveningTimer);
-      const tick = () => {
-        if (!whoAmI || !notifyOn) return;
-        if (pastEvening()) fireTomorrowReminder(false);
-      };
-      tick();
-      eveningTimer = setInterval(tick, 60 * 1000);
-    }
-    function pushBase() {
-      const cfg = String(window.PUSH_URL || "").replace(/\/$/, "");
-      if (location.protocol === "https:" && !/github\.io$/i.test(location.hostname)) return location.origin;
-      if (location.hostname === "localhost" || location.hostname === "127.0.0.1") return cfg || location.origin;
-      return cfg;
-    }
-    function urlB64ToUint8Array(b64) {
-      const pad = "=".repeat((4 - b64.length % 4) % 4);
-      const raw = atob((b64 + pad).replace(/-/g, "+").replace(/_/g, "/"));
-      return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
-    }
-    async function subscribePush() {
-      const base = pushBase();
-      if (!base || !navigator.serviceWorker) return { ok: false, reason: "no server" };
-      try {
-        const r = await fetch(base + "/vapidPublicKey", { headers: { "Bypass-Tunnel-Reminder": "true" } });
-        if (!r.ok) throw new Error("vapid");
-        const { publicKey } = await r.json();
-        const reg = await navigator.serviceWorker.ready;
-        const sub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlB64ToUint8Array(publicKey)
-        });
-        const res = await fetch(base + "/subscribe", {
-          method: "POST",
-          headers: { "content-type": "application/json", "Bypass-Tunnel-Reminder": "true" },
-          body: JSON.stringify({ pic: whoAmI, subscription: sub.toJSON() })
-        });
-        return { ok: res.ok };
-      } catch (err) {
-        return { ok: false, reason: String(err.message || err) };
-      }
-    }
-    async function testPushNow() {
-      const base = pushBase();
-      fireTomorrowReminder(true);
-      if (!base || !whoAmI) return;
-      try {
-        await fetch(base + "/test", {
-          method: "POST",
-          headers: { "content-type": "application/json", "Bypass-Tunnel-Reminder": "true" },
-          body: JSON.stringify({ pic: whoAmI })
-        });
-      } catch (e) {}
-    }
-
-    function renderWhoBar() {
-      const bar = $("whoBar");
-      if (!bar) return;
-      const live = navigator.onLine;
-      const push = pushBase();
-      bar.innerHTML = `
-        <span>This phone is</span>
-        <select id="whoSel">
-          <option value="">Not set</option>
-          ${PEOPLE.map(p => `<option value="${p.id}" ${whoAmI===p.id?"selected":""}>${p.name}</option>`).join("")}
-        </select>
-        <button type="button" id="notifyBtn" class="${notifyOn?"on":""}">${notifyOn ? "Alerts on" : "Turn alerts on"}</button>
-        <button type="button" id="testEveBtn">Test tonight</button>
-        <span class="who-note"><i class="dot-live ${live?"":"off"}"></i>${live ? "online" : "offline"} · 20:10 VN = tomorrow’s jobs · lock-screen ${push ? "via " + push : "needs Node server"}</span>`;
-      $("whoSel").onchange = e => {
-        whoAmI = e.target.value;
-        try { localStorage.setItem(LS_WHO, whoAmI); } catch (err) {}
-        writeSeen(JOBS.filter(j => j.pic === whoAmI).map(jobKey));
-        if (notifyOn && whoAmI) subscribePush();
-        renderWhoBar();
-      };
-      $("notifyBtn").onclick = async () => {
-        if (!whoAmI) { alert("Pick who this phone is first."); return; }
-        if (notifyOn) {
-          notifyOn = false;
-          try { localStorage.setItem(LS_NOTIFY, "0"); } catch (err) {}
-          renderWhoBar();
-          return;
-        }
-        if ("Notification" in window && Notification.permission === "default") {
-          try { await Notification.requestPermission(); } catch (err) {}
-        }
-        notifyOn = true;
-        try { localStorage.setItem(LS_NOTIFY, "1"); } catch (err) {}
-        writeSeen(JOBS.filter(j => j.pic === whoAmI).map(jobKey));
-        const sub = await subscribePush();
-        renderWhoBar();
-        const extra = sub.ok
-          ? " Lock-screen registered."
-          : " Lock-screen failed: " + (sub.reason || "no server") + ". Open the Home Screen icon, refresh, try Turn alerts on again.";
-        showToast({ pic: whoAmI, date: addDays(vnNow().date, 1), t: "Alerts on for " + pic(whoAmI).name + ". 20:10 VN reminds tomorrow." + extra });
-      };
-      $("testEveBtn").onclick = () => {
-        if (!whoAmI) { alert("Pick who this phone is first."); return; }
-        if (!notifyOn) { alert("Turn alerts on first."); return; }
-        testPushNow();
-      };
-    }
-
-    function showToast(item) {
-      const stack = $("toastStack");
-      if (!stack) return;
-      const el = document.createElement("div");
-      el.className = "toast";
-      el.innerHTML = `<div class="t-pic">${pic(item.pic) ? pic(item.pic).name : "PIC"}</div><div class="t-msg">${item.t}</div>`;
-      el.onclick = () => { if (item.date) jumpToAlert(item.date); el.remove(); };
-      stack.appendChild(el);
-      setTimeout(() => { if (el.parentNode) el.remove(); }, 8000);
-    }
-
-    function maybeNotifyNewJobs() {
-      const seenList = readSeen();
-      if (!whoAmI || !notifyOn || !seenList.length) {
-        writeSeen(JOBS.map(jobKey));
-        return;
-      }
-      const seen = new Set(seenList);
-      const mine = JOBS.filter(j => j.pic === whoAmI);
-      const fresh = mine.filter(j => !seen.has(jobKey(j)));
-      writeSeen([...seen, ...JOBS.map(jobKey)]);
-      if (!fresh.length) return;
-      fresh.slice(0, 4).forEach(j => {
-        const p = pic(j.pic);
-        const t = j.type === "leave"
-          ? `${p.name} — leave ${j.date}`
-          : `${p.name} · ${j.factory || "factory"} · ${j.type} · ${j.date}`;
-        showToast({ pic: j.pic, date: j.date, t });
-        if ("Notification" in window && Notification.permission === "granted" && document.visibilityState !== "visible") {
-          try {
-            new Notification("QA Board — " + p.name, { body: t, data: { date: j.date } });
-          } catch (e) {}
-        }
-      });
-    }
-
     function consumeAlertHash() {
       const m = (location.hash || "").match(/alert=(\d{4}-\d{2}-\d{2})/);
       if (m) jumpToAlert(m[1]);
@@ -2016,7 +1773,6 @@
       if (h1) h1.childNodes[0].textContent = yearMode ? "Yearly Summary — " : "Full Month Calendar — ";
       renderYearMenu();
       $("monthBtn").textContent = yearMode ? "Year" : SHORT[view.m];
-      renderWhoBar();
       renderFilters();
       if (yearMode) renderYearSummary();
       else renderCal();
@@ -2093,16 +1849,10 @@
       closeDayPop();
     });
     window.addEventListener("online", () => { loadJobs().then(render); });
-    window.addEventListener("offline", () => { renderWhoBar(); });
     window.addEventListener("hashchange", consumeAlertHash);
     if (navigator.serviceWorker) {
-      navigator.serviceWorker.addEventListener("message", ev => {
-        const data = ev.data || {};
-        if (data.type === "alert-jump" && data.date) jumpToAlert(data.date);
-      });
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
-    scheduleEveningWatch();
     try { resultOverlays = JSON.parse(localStorage.getItem("qa-board-results") || "{}"); } catch (e) { resultOverlays = {}; }
     loadJobs().then(() => loadResultOverlays()).then(() => { render(); consumeAlertHash(); });
   </script>
