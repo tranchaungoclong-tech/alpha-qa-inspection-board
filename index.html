@@ -632,7 +632,7 @@
     </div>
   </div>
 
-  <script src="sheet-config.js"></script>
+  <script src="sheet-config.js?v=31b"></script>
   <script>
     const PEOPLE = [
       { id: "philip", name: "Philip", color: "#FB7185" },
@@ -1812,8 +1812,10 @@
         writeSeen(JOBS.filter(j => j.pic === whoAmI).map(jobKey));
         const sub = await subscribePush();
         renderWhoBar();
-        const extra = sub.ok ? " Lock-screen registered." : " Toast on this board; lock-screen needs the Node server running.";
-        showToast({ pic: whoAmI, date: addDays(vnNow().date, 1), t: "Alerts on for " + pic(whoAmI).name + ". 20:00 VN reminds tomorrow." + extra });
+        const extra = sub.ok
+          ? " Lock-screen registered."
+          : " Lock-screen failed: " + (sub.reason || "no server") + ". Open the Home Screen icon, refresh, try Turn alerts on again.";
+        showToast({ pic: whoAmI, date: addDays(vnNow().date, 1), t: "Alerts on for " + pic(whoAmI).name + ". 20:10 VN reminds tomorrow." + extra });
       };
       $("testEveBtn").onclick = () => {
         if (!whoAmI) { alert("Pick who this phone is first."); return; }
