@@ -16,7 +16,7 @@ Do **not** edit this GitHub repo to add inspections. GitHub only hosts the page.
 
 | File | Role |
 | --- | --- |
-| `index.html` | Board (v25 — phone tap-day popup) |
+| `index.html` | Board (v26 — tight charts + iPhone day popup) |
 | `sheet-config.js` | Published CSV URL |
 | `SHEET.md` | Form → CSV → Pages |
 
