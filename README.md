@@ -16,7 +16,7 @@ Do **not** edit this GitHub repo to add inspections. GitHub only hosts the page.
 
 | File | Role |
 | --- | --- |
-| `index.html` | Board (v19 — Location + Category side by side under calendar) |
+| `index.html` | Board (v20 — Factory/Client compact F/I legend) |
 | `sheet-config.js` | Published CSV URL |
 | `SHEET.md` | Form → CSV → Pages |
 
