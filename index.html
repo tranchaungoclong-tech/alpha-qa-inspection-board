@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="QA Board" />
-  <title>Alpha QA — Inspection Board v34</title>
+  <title>Alpha QA — Inspection Board v35</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon-192.png" type="image/png" />
   <link rel="apple-touch-icon" href="icon-180.png" />
@@ -293,11 +293,39 @@
     .job.conflict-tag { background: #FEE2E2; color: var(--conflict-ink); font-weight: 600; border-left: 0; }
     .job .dur { font-weight: 600; color: var(--muted); font-size: 13px; }
     .ico { font-size: 14px; line-height: 1; }
-    .stamp { font-weight: 700; font-size: 13px; cursor: pointer; border-radius: 6px; padding: 0 2px; }
-    .stamp.ok { color: var(--pass); }
-    .stamp.bad { color: var(--fail); }
-    .stamp.wait { color: var(--warn); }
-    .stamp:hover { outline: 1px solid currentColor; }
+    .stamp-wrap { position: relative; display: inline-flex; vertical-align: middle; pointer-events: auto; z-index: 2; }
+    .stamp {
+      font-weight: 700; font-size: 13px; cursor: pointer; border-radius: 6px;
+      padding: 2px 6px; border: 1px solid transparent; background: transparent;
+      font-family: inherit; line-height: 1.2; -webkit-tap-highlight-color: transparent;
+    }
+    .stamp.ok { color: var(--pass); background: #ECFDF5; border-color: #BBF7D0; }
+    .stamp.bad { color: var(--fail); background: #FFF1F2; border-color: #FECDD3; }
+    .stamp.wait { color: var(--warn); background: #FFFBEB; border-color: #FDE68A; }
+    .stamp:after { content: " ▾"; font-size: .85em; opacity: .7; }
+    .result-scrim {
+      display: none; position: fixed; inset: 0; z-index: 255;
+      background: transparent; -webkit-tap-highlight-color: transparent;
+    }
+    .result-scrim.on { display: block; }
+    .result-menu {
+      display: none; position: fixed; z-index: 260;
+      min-width: 176px; padding: 6px;
+      background: #fff; border: 1px solid var(--line); border-radius: 12px;
+      box-shadow: 0 10px 28px rgba(15,23,42,.18);
+    }
+    .result-menu.on { display: block; }
+    .result-menu button {
+      display: flex; align-items: center; gap: 8px; width: 100%;
+      min-height: 44px; padding: 8px 12px; border: 0; border-radius: 8px;
+      background: transparent; font: 600 15px/1.2 "IBM Plex Sans", sans-serif;
+      text-align: left; cursor: pointer; color: var(--ink);
+    }
+    .result-menu button.on { outline: 1px solid currentColor; background: #F8FAFC; }
+    .result-menu button[data-v="pass"] { color: var(--pass); }
+    .result-menu button[data-v="fail"] { color: var(--fail); }
+    .result-menu button[data-v="pending"] { color: var(--warn); }
+    .result-menu button:active { background: #F1F5F9; }
     .re { font-size: 11px; color: var(--fail); font-weight: 700; }
     .side { display: flex; flex-direction: column; gap: 12px; }
     table.lb { width: 100%; border-collapse: collapse; }
@@ -445,6 +473,9 @@
       .job b { font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .job .row { gap: 2px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
       .job .dur, .stamp, .re { font-size: 9px; }
+      .stamp { padding: 1px 4px; min-height: 22px; }
+      .day-pop-body .stamp { font-size: 15px; min-height: 36px; padding: 6px 10px; }
+      .result-menu { min-width: min(220px, calc(100vw - 24px)); }
       .job .ico { display: none; }
       .under-cal { width: 100%; max-width: 400px; grid-template-columns: 1fr; }
       .under-cal > .card { width: 100%; }
@@ -480,7 +511,7 @@
     <header>
       <div>
         <h1>Full Month Calendar — <span class="month-name" id="monthName">September</span> <span class="year-name" id="yearName">2026</span></h1>
-        <div class="sub">v34 · Standard: <b>20 working days / month</b> · data: <b id="dataSrc">demo</b> · click <b>Year</b> for yearly summary</div>
+        <div class="sub">v35 · Standard: <b>20 working days / month</b> · data: <b id="dataSrc">demo</b> · click <b>Year</b> for yearly summary</div>
       </div>
       <div class="head-right">
         <div class="pf-kpis">
@@ -621,7 +652,7 @@
         </div>
       </div>
     </div>
-    <footer>v34. Tap Pass / Fail / Pending to cycle. Version log on the server.</footer>
+    <footer>v35. Tap result → droplist Pass / Fail / Pending. Version log on the server.</footer>
   </div>
   <div class="toast-stack" id="toastStack"></div>
   <div class="day-pop" id="dayPop">
@@ -632,6 +663,12 @@
       </div>
       <div class="day-pop-body" id="dayPopBody"></div>
     </div>
+  </div>
+  <div class="result-scrim" id="resultScrim"></div>
+  <div class="result-menu" id="resultMenu" role="listbox" aria-label="Inspection result">
+    <button type="button" data-v="pass">✅ Pass</button>
+    <button type="button" data-v="fail">❌ Fail</button>
+    <button type="button" data-v="pending">⏳ Pending</button>
   </div>
 
   <script src="sheet-config.js?v=31b"></script>
@@ -922,10 +959,46 @@
         applyResultOverlays();
       } catch (e) {}
     }
-    function cycleResult(cur) {
-      if (cur === "pass") return "fail";
-      if (cur === "fail") return "pending";
-      return "pass";
+    let resultPickJob = null;
+    let pendingDayKey = "";
+    function stampMeta(result) {
+      if (result === "pass") return { cls: "ok", label: "✅ Pass" };
+      if (result === "fail") return { cls: "bad", label: "❌ Fail" };
+      return { cls: "wait", label: "⏳ Pending" };
+    }
+    function closeResultMenu() {
+      resultPickJob = null;
+      const menu = $("resultMenu");
+      const scrim = $("resultScrim");
+      if (menu) menu.classList.remove("on");
+      if (scrim) scrim.classList.remove("on");
+    }
+    function placeResultMenu(anchor) {
+      const menu = $("resultMenu");
+      if (!menu) return;
+      menu.classList.add("on");
+      const r = anchor.getBoundingClientRect();
+      const mw = Math.max(menu.offsetWidth, 176);
+      const mh = menu.offsetHeight;
+      let left = r.left;
+      let top = r.bottom + 6;
+      if (left + mw > window.innerWidth - 8) left = window.innerWidth - mw - 8;
+      if (left < 8) left = 8;
+      if (top + mh > window.innerHeight - 8) top = Math.max(8, r.top - mh - 6);
+      menu.style.left = left + "px";
+      menu.style.top = top + "px";
+    }
+    function openResultMenu(j, anchor) {
+      resultPickJob = j;
+      const menu = $("resultMenu");
+      const scrim = $("resultScrim");
+      if (!menu || !scrim) return;
+      const cur = j.result === "pass" || j.result === "fail" ? j.result : "pending";
+      menu.querySelectorAll("button").forEach(btn => {
+        btn.classList.toggle("on", btn.dataset.v === cur);
+      });
+      scrim.classList.add("on");
+      placeResultMenu(anchor);
     }
     async function setJobResult(j, next) {
       const key = jobKey(j);
@@ -1184,6 +1257,7 @@
         });
         cell.addEventListener("pointerup", ev => {
           if (ev.pointerType === "mouse" && ev.button !== 0) return;
+          if (ev.target.closest && ev.target.closest("[data-result], .result-menu")) return;
           openDayPop(key, list, meta);
         });
         cal.appendChild(cell);
@@ -1194,6 +1268,7 @@
     function openDayPop(key, list, meta) {
       const pop = $("dayPop");
       if (!pop) return;
+      pendingDayKey = key;
       const d = parse(key);
       const DOW = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
       const tag = meta && meta.warn
@@ -1214,6 +1289,8 @@
     }
 
     function closeDayPop() {
+      closeResultMenu();
+      pendingDayKey = "";
       const pop = $("dayPop");
       if (!pop) return;
       pop.classList.remove("on");
@@ -1228,13 +1305,8 @@
         el.style.borderLeftColor = p.color;
       }
       const dur = j.days === 1 ? "1d" : "½d";
-      const stamp = j.result === "pass"
-        ? `<span class="stamp ok" data-result="1">✅ Pass</span>`
-        : j.result === "fail"
-          ? `<span class="stamp bad" data-result="1">❌ Fail</span>`
-          : j.result === "pending"
-            ? `<span class="stamp wait" data-result="1">⏳ Pending</span>`
-            : `<span class="stamp wait" data-result="1">⏳ Pending</span>`;
+      const sm = stampMeta(j.result);
+      const stamp = `<span class="stamp-wrap"><button type="button" class="stamp ${sm.cls}" data-result="1">${sm.label}</button></span>`;
       const re = j.visit > 1 ? `<span class="re">(Re-inspect)</span>` : "";
       el.innerHTML = j.type === "leave"
         ? `<b>${p.name}</b><div class="row"><span class="ico">🌴</span> Annual leave</div>`
@@ -1243,16 +1315,24 @@
            <div class="row"><span class="ico">📌</span> ${j.type[0].toUpperCase()+j.type.slice(1)} | ${stamp} ${re}</div>`;
       const stampEl = el.querySelector("[data-result]");
       if (stampEl && j.type !== "leave") {
-        stampEl.title = "Tap to cycle Pass → Fail → Pending";
+        stampEl.title = "Choose Pass, Fail or Pending";
         stampEl.addEventListener("pointerup", ev => {
           ev.stopPropagation();
           ev.preventDefault();
-          setJobResult(j, cycleResult(j.result));
+          openResultMenu(j, stampEl);
+        });
+        stampEl.addEventListener("click", ev => {
+          ev.stopPropagation();
+          ev.preventDefault();
         });
       }
       if (opensPop) {
         el.querySelectorAll("b, .row, .ico, .dur, .re").forEach(n => { n.style.pointerEvents = "none"; });
-        if (stampEl) stampEl.style.pointerEvents = "auto";
+        if (stampEl) {
+          stampEl.style.pointerEvents = "auto";
+          const wrap = stampEl.closest(".stamp-wrap");
+          if (wrap) wrap.style.pointerEvents = "auto";
+        }
       }
       return el;
     }
@@ -1942,6 +2022,14 @@
       else renderCal();
       $("yearBtn").title = yearMode ? "Pick another year" : "Open yearly summary";
       renderBoard();
+      if (pendingDayKey && !yearMode) {
+        const key = pendingDayKey;
+        const shown = filteredMonth();
+        const allMonth = monthJobs();
+        const byAll = {}; allMonth.forEach(j => { (byAll[j.date] ||= []).push(j); });
+        const byShow = {}; shown.forEach(j => { (byShow[j.date] ||= []).push(j); });
+        openDayPop(key, byShow[key] || [], dayMeta(byAll[key] || []));
+      }
       renderDonut();
       renderPfRings();
       renderCatBars();
@@ -1957,14 +2045,16 @@
     });
 
     $("prev").onclick = () => {
+      closeDayPop();
       if (yearMode) { view.y--; render(); return; }
       view.m--; if (view.m < 0) { view.m = 11; view.y--; } render();
     };
     $("next").onclick = () => {
+      closeDayPop();
       if (yearMode) { view.y++; render(); return; }
       view.m++; if (view.m > 11) { view.m = 0; view.y++; } render();
     };
-    $("monthBtn").onclick = () => { yearMode = false; const n = vnNow().date.split("-").map(Number); view.y = n[0]; view.m = n[1] - 1; render(); };
+    $("monthBtn").onclick = () => { closeDayPop(); yearMode = false; const n = vnNow().date.split("-").map(Number); view.y = n[0]; view.m = n[1] - 1; render(); };
     $("yearBtn").onclick = ev => {
       ev.stopPropagation();
       if (yearMode) {
@@ -1980,7 +2070,28 @@
     $("failKpi").onclick = () => setFilter("result", "fail");
     $("dayPopClose").onclick = ev => { ev.stopPropagation(); closeDayPop(); };
     $("dayPop").onclick = ev => { if (ev.target.id === "dayPop") closeDayPop(); };
-    document.addEventListener("keydown", ev => { if (ev.key === "Escape") closeDayPop(); });
+    $("resultScrim").addEventListener("pointerup", ev => {
+      ev.stopPropagation();
+      ev.preventDefault();
+      closeResultMenu();
+    });
+    $("resultMenu").addEventListener("pointerup", ev => {
+      ev.stopPropagation();
+      ev.preventDefault();
+      const btn = ev.target.closest("button[data-v]");
+      if (!btn || !resultPickJob) return;
+      const next = btn.dataset.v;
+      const j = resultPickJob;
+      const pop = $("dayPop");
+      if (pop && pop.classList.contains("on")) pendingDayKey = j.date;
+      closeResultMenu();
+      if (next !== j.result) setJobResult(j, next);
+    });
+    document.addEventListener("keydown", ev => {
+      if (ev.key !== "Escape") return;
+      if ($("resultMenu") && $("resultMenu").classList.contains("on")) { closeResultMenu(); return; }
+      closeDayPop();
+    });
     window.addEventListener("online", () => { loadJobs().then(render); });
     window.addEventListener("offline", () => { renderWhoBar(); });
     window.addEventListener("hashchange", consumeAlertHash);

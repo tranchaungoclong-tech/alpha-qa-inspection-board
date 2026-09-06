@@ -16,7 +16,7 @@ Do **not** edit this GitHub repo to add inspections. GitHub only hosts the page.
 
 | File | Role |
 | --- | --- |
-| `index.html` | Board (v34 — tap Pass/Fail/Pending; version log) |
+| `index.html` | Board (v35 — droplist Pass/Fail/Pending; version log) |
 | `sheet-config.js` | Published CSV URL + `PUSH_URL` |
 | `sw.js` / `manifest.json` | Offline PWA + lock-screen push click |
 | `notify-server/` | Node web-push (must keep running for lock-screen) |
