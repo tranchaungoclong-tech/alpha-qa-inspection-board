@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="QA Board" />
-  <title>Alpha QA — Inspection Board v30</title>
+  <title>Alpha QA — Inspection Board v31</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="icon.svg" />
@@ -478,7 +478,7 @@
     <header>
       <div>
         <h1>Full Month Calendar — <span class="month-name" id="monthName">September</span> <span class="year-name" id="yearName">2026</span></h1>
-        <div class="sub">v30 · Standard: <b>20 working days / month</b> · data: <b id="dataSrc">demo</b> · click <b>Year</b> for yearly summary</div>
+        <div class="sub">v31 · Standard: <b>20 working days / month</b> · data: <b id="dataSrc">demo</b> · click <b>Year</b> for yearly summary</div>
       </div>
       <div class="head-right">
         <div class="pf-kpis">
@@ -619,7 +619,7 @@
         </div>
       </div>
     </div>
-    <footer>v30. Offline cache. This-phone PIC toast. Alert tap jumps to the yellow day.</footer>
+    <footer>v31. 20:00 VN reminder of tomorrow’s jobs. Lock-screen needs the Node push server.</footer>
   </div>
   <div class="toast-stack" id="toastStack"></div>
   <div class="day-pop" id="dayPop">
@@ -739,8 +739,22 @@
 
     const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
     const SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-    const TODAY = "2026-09-05";
-    let view = { y: 2026, m: 8 };
+    function vnNow() {
+      const parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit", hourCycle: "h23"
+      }).formatToParts(new Date());
+      const get = t => parts.find(p => p.type === t).value;
+      return { date: `${get("year")}-${get("month")}-${get("day")}`, hour: Number(get("hour")), minute: Number(get("minute")) };
+    }
+    function addDays(isoDate, n) {
+      const [y, m, d] = isoDate.split("-").map(Number);
+      const dt = new Date(Date.UTC(y, m - 1, d + n));
+      return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, "0")}-${String(dt.getUTCDate()).padStart(2, "0")}`;
+    }
+    const TODAY = vnNow().date;
+    const todayParts = TODAY.split("-").map(Number);
+    let view = { y: todayParts[0], m: todayParts[1] - 1 };
     let yearMode = false;
     let f = { pic: "all", customer: "all", factory: "all", type: "all", result: "all", category: "all", country: "all", conflicts: false, leave: false };
     let hitDate = "";
@@ -749,10 +763,12 @@
     const LS_WHO = "qa-board-who";
     const LS_NOTIFY = "qa-board-notify";
     const LS_SEEN = "qa-board-seen";
+    const LS_EVE = "qa-board-evening";
     let whoAmI = "";
     try { whoAmI = localStorage.getItem(LS_WHO) || ""; } catch (e) { whoAmI = ""; }
     let notifyOn = false;
     try { notifyOn = localStorage.getItem(LS_NOTIFY) === "1"; } catch (e) { notifyOn = false; }
+    let eveningTimer = 0;
 
     const $ = id => document.getElementById(id);
     const pic = id => PEOPLE.find(p => p.id === id);
@@ -1677,10 +1693,82 @@
       });
     }
 
+    function tomorrowJobsFor(picId, day) {
+      return JOBS.filter(j => j.pic === picId && j.date === day);
+    }
+    function tomorrowLine(list, day) {
+      if (!list.length) return `Tomorrow ${day}: no inspect on the sheet.`;
+      const bits = list.map(j => j.type === "leave" ? "leave" : `${j.factory || "factory"} · ${j.type}${j.customer ? " · " + j.customer : ""}`);
+      return `Tomorrow ${day}: ${bits.join(" · ")}`;
+    }
+    function fireTomorrowReminder(force) {
+      if (!whoAmI || !notifyOn) return;
+      const today = vnNow().date;
+      const day = addDays(today, 1);
+      try {
+        if (!force && localStorage.getItem(LS_EVE) === today) return;
+        localStorage.setItem(LS_EVE, today);
+      } catch (e) {}
+      const list = tomorrowJobsFor(whoAmI, day);
+      const t = tomorrowLine(list, day);
+      showToast({ pic: whoAmI, date: day, t });
+      if ("Notification" in window && Notification.permission === "granted") {
+        try { new Notification("QA Board — tomorrow", { body: t, data: { date: day } }); } catch (e) {}
+      }
+    }
+    function scheduleEveningWatch() {
+      if (eveningTimer) clearInterval(eveningTimer);
+      eveningTimer = setInterval(() => {
+        if (!whoAmI || !notifyOn) return;
+        const n = vnNow();
+        if (n.hour === 20 && n.minute < 3) fireTomorrowReminder(false);
+      }, 60 * 1000);
+    }
+    function urlB64ToUint8Array(b64) {
+      const pad = "=".repeat((4 - b64.length % 4) % 4);
+      const raw = atob((b64 + pad).replace(/-/g, "+").replace(/_/g, "/"));
+      return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+    }
+    async function subscribePush() {
+      const base = String(window.PUSH_URL || "").replace(/\/$/, "");
+      if (!base || !navigator.serviceWorker) return { ok: false, reason: "no server" };
+      try {
+        const r = await fetch(base + "/vapidPublicKey");
+        if (!r.ok) throw new Error("vapid");
+        const { publicKey } = await r.json();
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlB64ToUint8Array(publicKey)
+        });
+        const res = await fetch(base + "/subscribe", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ pic: whoAmI, subscription: sub.toJSON() })
+        });
+        return { ok: res.ok };
+      } catch (err) {
+        return { ok: false, reason: String(err.message || err) };
+      }
+    }
+    async function testPushNow() {
+      const base = String(window.PUSH_URL || "").replace(/\/$/, "");
+      fireTomorrowReminder(true);
+      if (!base || !whoAmI) return;
+      try {
+        await fetch(base + "/test", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ pic: whoAmI })
+        });
+      } catch (e) {}
+    }
+
     function renderWhoBar() {
       const bar = $("whoBar");
       if (!bar) return;
       const live = navigator.onLine;
+      const push = String(window.PUSH_URL || "").trim();
       bar.innerHTML = `
         <span>This phone is</span>
         <select id="whoSel">
@@ -1688,11 +1776,13 @@
           ${PEOPLE.map(p => `<option value="${p.id}" ${whoAmI===p.id?"selected":""}>${p.name}</option>`).join("")}
         </select>
         <button type="button" id="notifyBtn" class="${notifyOn?"on":""}">${notifyOn ? "Alerts on" : "Turn alerts on"}</button>
-        <span class="who-note"><i class="dot-live ${live?"":"off"}"></i>${live ? "online" : "offline"} · toast only for this PIC · iOS lock-screen needs a 24/7 server</span>`;
+        <button type="button" id="testEveBtn">Test tonight</button>
+        <span class="who-note"><i class="dot-live ${live?"":"off"}"></i>${live ? "online" : "offline"} · 20:00 VN = tomorrow’s jobs · lock-screen ${push ? "via " + push : "needs Node server"}</span>`;
       $("whoSel").onchange = e => {
         whoAmI = e.target.value;
         try { localStorage.setItem(LS_WHO, whoAmI); } catch (err) {}
         writeSeen(JOBS.filter(j => j.pic === whoAmI).map(jobKey));
+        if (notifyOn && whoAmI) subscribePush();
         renderWhoBar();
       };
       $("notifyBtn").onclick = async () => {
@@ -1709,8 +1799,15 @@
         notifyOn = true;
         try { localStorage.setItem(LS_NOTIFY, "1"); } catch (err) {}
         writeSeen(JOBS.filter(j => j.pic === whoAmI).map(jobKey));
+        const sub = await subscribePush();
         renderWhoBar();
-        showToast({ pic: whoAmI, date: TODAY, t: "Alerts on for " + pic(whoAmI).name + " on this phone." });
+        const extra = sub.ok ? " Lock-screen registered." : " Toast on this board; lock-screen needs the Node server running.";
+        showToast({ pic: whoAmI, date: addDays(vnNow().date, 1), t: "Alerts on for " + pic(whoAmI).name + ". 20:00 VN reminds tomorrow." + extra });
+      };
+      $("testEveBtn").onclick = () => {
+        if (!whoAmI) { alert("Pick who this phone is first."); return; }
+        if (!notifyOn) { alert("Turn alerts on first."); return; }
+        testPushNow();
       };
     }
 
@@ -1792,7 +1889,7 @@
       if (yearMode) { view.y++; render(); return; }
       view.m++; if (view.m > 11) { view.m = 0; view.y++; } render();
     };
-    $("monthBtn").onclick = () => { yearMode = false; view.m = 8; render(); };
+    $("monthBtn").onclick = () => { yearMode = false; const n = vnNow().date.split("-").map(Number); view.y = n[0]; view.m = n[1] - 1; render(); };
     $("yearBtn").onclick = ev => {
       ev.stopPropagation();
       if (yearMode) {
@@ -1819,6 +1916,7 @@
       });
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
+    scheduleEveningWatch();
     loadJobs().then(() => { render(); consumeAlertHash(); });
   </script>
 </body>

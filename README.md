@@ -16,9 +16,10 @@ Do **not** edit this GitHub repo to add inspections. GitHub only hosts the page.
 
 | File | Role |
 | --- | --- |
-| `index.html` | Board (v30 — offline cache, PIC toast, Alert jump) |
-| `sheet-config.js` | Published CSV URL |
-| `sw.js` / `manifest.json` | Offline PWA cache |
+| `index.html` | Board (v31 — 20:00 VN tomorrow reminder) |
+| `sheet-config.js` | Published CSV URL + `PUSH_URL` |
+| `sw.js` / `manifest.json` | Offline PWA + lock-screen push click |
+| `notify-server/` | Node web-push (must keep running for lock-screen) |
 | `SHEET.md` | Form → CSV → Pages |
 
 Anyone with the CSV URL can read the log. Keep secrets out of the Sheet.

@@ -1,4 +1,4 @@
-const CACHE = "qa-board-v30";
+const CACHE = "qa-board-v31";
 const PRECACHE = ["./", "./index.html", "./sheet-config.js", "./manifest.json", "./icon.svg"];
 
 self.addEventListener("install", event => {
@@ -30,6 +30,23 @@ self.addEventListener("fetch", event => {
       }
       return res;
     }).catch(() => caches.match(req).then(hit => hit || caches.match("./index.html")))
+  );
+});
+
+self.addEventListener("push", event => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch (e) {
+    data = { title: "QA Board", body: event.data ? event.data.text() : "Tomorrow inspect" };
+  }
+  const title = data.title || "QA Board — tomorrow";
+  const body = data.body || "Open the board for tomorrow’s jobs.";
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body,
+      data: { date: data.date || "", pic: data.pic || "" },
+      icon: "./icon.svg",
+      badge: "./icon.svg"
+    })
   );
 });
 

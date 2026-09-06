@@ -7,5 +7,7 @@ jobs-*.csv
 index-v*.html
 v*-revision.md
 VERSIONS.md
+notify-server/node_modules/
+notify-server/data/
 .DS_Store
 Thumbs.db
