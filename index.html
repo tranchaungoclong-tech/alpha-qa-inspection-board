@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#C33D27" />
-  <title>Alpha QA — Inspection Board v24</title>
+  <title>Alpha QA — Inspection Board v25</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,600;6..72,700&display=swap" rel="stylesheet" />
@@ -390,6 +390,30 @@
       .cat-row { grid-template-columns: 72px 1fr 40px; }
       .card { padding: 12px; border-radius: 12px; }
       .card h2 { font-size: 13px; margin-bottom: 8px; padding-bottom: 6px; }
+      .day-pop {
+        display: none; position: fixed; inset: 0; z-index: 80;
+        background: rgba(15,23,42,.45);
+        align-items: flex-end; justify-content: center;
+      }
+      .day-pop.on { display: flex; }
+      .day-pop-card {
+        width: 100%; max-height: 78vh; overflow: auto;
+        background: #fff; border-radius: 18px 18px 0 0;
+        padding: 14px 14px max(18px, env(safe-area-inset-bottom));
+        box-shadow: 0 -8px 30px rgba(15,23,42,.18);
+      }
+      .day-pop-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+      .day-pop-head b { font-size: 18px; }
+      .day-pop-head button {
+        border: 0; background: #F1F5F9; width: 36px; height: 36px; border-radius: 18px;
+        font-size: 22px; line-height: 1; cursor: pointer; color: var(--ink);
+      }
+      .day-pop-body { display: flex; flex-direction: column; gap: 8px; }
+      .day-pop-body .job { font-size: 14px; padding: 10px 10px 10px 12px; }
+      .day-pop-body .job b { font-size: 16px; white-space: normal; }
+      .day-pop-body .job .row { white-space: normal; overflow: visible; text-overflow: unset; display: flex; }
+      .day-pop-body .job .ico { display: inline; }
+      .day-pop-empty { color: var(--muted); font-size: 14px; padding: 8px 2px; }
     }
   </style>
 </head>
@@ -398,7 +422,7 @@
     <header>
       <div>
         <h1>Full Month Calendar — <span class="month-name" id="monthName">September</span> <span class="year-name" id="yearName">2026</span></h1>
-        <div class="sub">v24 · Standard: <b>20 working days / month</b> · data: <b id="dataSrc">demo</b> · click <b>Year</b> for yearly summary</div>
+        <div class="sub">v25 · Standard: <b>20 working days / month</b> · data: <b id="dataSrc">demo</b> · click <b>Year</b> for yearly summary</div>
       </div>
       <div class="head-right">
         <div class="pf-kpis">
@@ -538,7 +562,16 @@
         </div>
       </div>
     </div>
-    <footer>v24. Phone donuts fixed 120px. Desktop 180px.</footer>
+    <footer>v25. Phone: tap a calendar day for factory / client / type. Desktop unchanged.</footer>
+  </div>
+  <div class="day-pop" id="dayPop" hidden>
+    <div class="day-pop-card" role="dialog" aria-modal="true">
+      <div class="day-pop-head">
+        <b id="dayPopTitle">Day</b>
+        <button type="button" id="dayPopClose" aria-label="Close">×</button>
+      </div>
+      <div class="day-pop-body" id="dayPopBody"></div>
+    </div>
   </div>
 
   <script src="sheet-config.js"></script>
@@ -976,9 +1009,47 @@
         list.forEach(j => {
           cell.appendChild(jobCard(j));
         });
+        cell.onclick = () => {
+          if (window.matchMedia("(max-width: 820px)").matches) openDayPop(key, list, meta);
+        };
         cal.appendChild(cell);
       }
       renderAgenda(shown, byAll, byShow);
+    }
+
+    function isPhone() {
+      return window.matchMedia("(max-width: 820px)").matches;
+    }
+
+    function openDayPop(key, list, meta) {
+      const pop = $("dayPop");
+      if (!pop) return;
+      const d = parse(key);
+      const DOW = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+      const tag = meta && meta.warn
+        ? (meta.overload && meta.conflict ? " · Overload / conflict" : meta.overload ? " · Overload" : " · Conflict")
+        : "";
+      $("dayPopTitle").textContent = `${DOW[mon0(d)]} ${d.getDate()} ${SHORT[d.getMonth()]}${tag}`;
+      const body = $("dayPopBody");
+      body.innerHTML = "";
+      if (!list.length) {
+        body.innerHTML = `<div class="day-pop-empty">No visit this day.</div>`;
+      } else {
+        list.forEach(j => {
+          const card = jobCard(j);
+          card.onclick = ev => ev.stopPropagation();
+          body.appendChild(card);
+        });
+      }
+      pop.hidden = false;
+      pop.classList.add("on");
+    }
+
+    function closeDayPop() {
+      const pop = $("dayPop");
+      if (!pop) return;
+      pop.classList.remove("on");
+      pop.hidden = true;
     }
 
     function jobCard(j) {
@@ -1005,6 +1076,11 @@
            <div class="row"><span class="ico">📌</span> ${j.type[0].toUpperCase()+j.type.slice(1)} | ${stamp} ${re}</div>`;
       el.onclick = ev => {
         ev.stopPropagation();
+        if (isPhone()) {
+          const dayJobs = filteredMonth().filter(x => x.date === j.date);
+          openDayPop(j.date, dayJobs, dayMeta(monthJobs().filter(x => x.date === j.date)));
+          return;
+        }
         if (f.pic === j.pic) setFilter("customer", j.customer || "all");
         else setFilter("pic", j.pic);
       };
@@ -1538,6 +1614,9 @@
     $("yearBack").onclick = () => { yearMode = false; render(); };
     $("passKpi").onclick = () => setFilter("result", "pass");
     $("failKpi").onclick = () => setFilter("result", "fail");
+    $("dayPopClose").onclick = ev => { ev.stopPropagation(); closeDayPop(); };
+    $("dayPop").onclick = ev => { if (ev.target.id === "dayPop") closeDayPop(); };
+    document.addEventListener("keydown", ev => { if (ev.key === "Escape") closeDayPop(); });
     loadJobs().then(render);
   </script>
 </body>
