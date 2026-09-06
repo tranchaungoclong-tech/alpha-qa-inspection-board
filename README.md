@@ -16,7 +16,7 @@ Do **not** edit this GitHub repo to add inspections. GitHub only hosts the page.
 
 | File | Role |
 | --- | --- |
-| `index.html` | Board (v21 — Pass/Fail next to Category; Factory/Client ring) |
+| `index.html` | Board (v22 — Factory/Client large centered ring) |
 | `sheet-config.js` | Published CSV URL |
 | `SHEET.md` | Form → CSV → Pages |
 
