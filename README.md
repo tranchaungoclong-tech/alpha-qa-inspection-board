@@ -16,7 +16,7 @@ Do **not** edit this GitHub repo to add inspections. GitHub only hosts the page.
 
 | File | Role |
 | --- | --- |
-| `index.html` | Board (v32 — PIC/alerts bar on phone only) |
+| `index.html` | Board (v33 — PIC/alerts bar hidden; 20:10 VN push in background) |
 | `sheet-config.js` | Published CSV URL + `PUSH_URL` |
 | `sw.js` / `manifest.json` | Offline PWA + lock-screen push click |
 | `notify-server/` | Node web-push (must keep running for lock-screen) |
