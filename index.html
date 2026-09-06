@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#C33D27" />
-  <title>Alpha QA — Inspection Board v20</title>
+  <title>Alpha QA — Inspection Board v21</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,600;6..72,700&display=swap" rel="stylesheet" />
@@ -154,7 +154,7 @@
     .under-cal {
       grid-area: under;
       display: grid;
-      grid-template-columns: 400px 400px;
+      grid-template-columns: 400px 400px 400px;
       gap: 12px;
       width: max-content;
       max-width: 100%;
@@ -166,7 +166,7 @@
     .donuts {
       grid-area: charts;
       display: grid;
-      grid-template-columns: 1.15fr 1fr 3fr 1fr;
+      grid-template-columns: 1.15fr 1fr 3fr;
       gap: 10px;
       align-items: stretch;
     }
@@ -252,7 +252,7 @@
       display: grid; grid-template-columns: 132px 1fr; gap: 10px;
       align-items: center; width: 100%;
     }
-    .split-donut svg.donut { width: 132px; max-width: 132px; }
+    .split-donut svg.donut { width: 148px; max-width: 148px; }
     .split-donut .leg {
       display: flex; flex-direction: column; flex-wrap: nowrap;
       align-items: flex-start; justify-content: center;
@@ -395,7 +395,7 @@
     <header>
       <div>
         <h1>Full Month Calendar — <span class="month-name" id="monthName">September</span> <span class="year-name" id="yearName">2026</span></h1>
-        <div class="sub">v20 · Standard: <b>20 working days / month</b> · data: <b id="dataSrc">demo</b> · click <b>Year</b> for yearly summary</div>
+        <div class="sub">v21 · Standard: <b>20 working days / month</b> · data: <b id="dataSrc">demo</b> · click <b>Year</b> for yearly summary</div>
       </div>
       <div class="head-right">
         <div class="pf-kpis">
@@ -486,6 +486,13 @@
           <div class="cat-key"><span><i style="background:#38BDF8"></i>Inline</span><span><i style="background:#FB7185"></i>Final</span></div>
           <div id="catBars"></div>
         </section>
+        <section class="card">
+          <h2>Pass / Fail</h2>
+          <div class="donut-wrap">
+            <svg class="donut" id="resultDonut" viewBox="0 0 280 280"></svg>
+            <div class="leg" id="resultLegend"></div>
+          </div>
+        </section>
       </div>
 
       <div class="donuts">
@@ -526,16 +533,9 @@
             </div>
           </section>
         </div>
-        <section class="card">
-          <h2>Pass / Fail</h2>
-          <div class="donut-wrap">
-            <svg class="donut" id="resultDonut" viewBox="0 0 280 280"></svg>
-            <div class="leg" id="resultLegend"></div>
-          </div>
-        </section>
       </div>
     </div>
-    <footer>v20. Factory / Client: compact donut + F/I days, no %. Phone: compact 7-day grid.</footer>
+    <footer>v21. Pass/Fail next to Category. Factory/Client ring donut. Phone: compact 7-day grid.</footer>
   </div>
 
   <script src="sheet-config.js"></script>
@@ -1142,7 +1142,9 @@
 
     function paintDonut(svgId, legendId, data, colorOf, onPick, unit, compact, fiLegend) {
       const { entries, total } = data;
-      const cx = 140, cy = 140, R = compact ? 122 : 118, r = compact ? 34 : 32;
+      const cx = 140, cy = 140;
+      const R = compact ? 122 : 118;
+      const r = fiLegend ? 78 : (compact ? 34 : 32);
       const pctSize = compact ? 20 : 22;
       const daySize = compact ? 13 : 14;
       const centerSize = compact ? 18 : 20;
