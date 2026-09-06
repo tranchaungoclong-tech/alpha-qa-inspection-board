@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#C33D27" />
-  <title>Alpha QA — Inspection Board v26</title>
+  <title>Alpha QA — Inspection Board v27</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,600;6..72,700&display=swap" rel="stylesheet" />
@@ -177,7 +177,7 @@
       align-items: flex-end; justify-content: center;
       -webkit-tap-highlight-color: transparent;
     }
-    .day-pop.on { display: flex; }
+    .day-pop.on { display: flex !important; }
     .day-pop-card {
       width: min(520px, 100%); max-height: 82vh; overflow: auto;
       background: #fff; border-radius: 18px 18px 0 0;
@@ -196,7 +196,7 @@
     .day-pop-body .job .row { white-space: normal; overflow: visible; text-overflow: unset; display: flex; }
     .day-pop-body .job .ico { display: inline; }
     .day-pop-empty { color: var(--muted); font-size: 14px; padding: 8px 2px; }
-    .donuts .card { padding: 12px; min-width: 0; }
+    .donuts .card { padding: 12px; min-width: 0; height: fit-content; align-self: start; }
     .donuts .card h2 { font-size: 14px; margin-bottom: 8px; padding-bottom: 6px; }
     .donuts svg.donut { width: 100%; max-width: 180px; }
     .donuts .leg { font-size: 12px; gap: 4px 8px; font-weight: 600; }
@@ -210,8 +210,10 @@
       border-radius: 16px;
       padding: 8px;
       min-width: 0;
+      align-items: start;
+      height: fit-content;
     }
-    .visit-family .card { margin: 0; box-shadow: none; border: 1px solid var(--line); }
+    .visit-family .card { margin: 0; box-shadow: none; border: 1px solid var(--line); height: fit-content; }
     .map-svg { width: 100%; height: auto; display: block; background: #E8F4FC; border-radius: 12px; }
     .map-note { margin: 8px 0 0; font-size: 11px; color: var(--muted); line-height: 1.35; }
     .map-leg { display: flex; flex-wrap: wrap; gap: 6px 10px; margin-top: 8px; font-size: 12px; font-weight: 700; }
@@ -426,7 +428,7 @@
     <header>
       <div>
         <h1>Full Month Calendar — <span class="month-name" id="monthName">September</span> <span class="year-name" id="yearName">2026</span></h1>
-        <div class="sub">v26 · Standard: <b>20 working days / month</b> · data: <b id="dataSrc">demo</b> · click <b>Year</b> for yearly summary</div>
+        <div class="sub">v27 · Standard: <b>20 working days / month</b> · data: <b id="dataSrc">demo</b> · click <b>Year</b> for yearly summary</div>
       </div>
       <div class="head-right">
         <div class="pf-kpis">
@@ -566,9 +568,9 @@
         </div>
       </div>
     </div>
-    <footer>v26. Charts tight under Location. Tap a day for factory / client / type.</footer>
+    <footer>v27. No empty strip under donuts. Tap a calendar day for details.</footer>
   </div>
-  <div class="day-pop" id="dayPop" hidden>
+  <div class="day-pop" id="dayPop">
     <div class="day-pop-card" role="dialog" aria-modal="true">
       <div class="day-pop-head">
         <b id="dayPopTitle">Day</b>
@@ -1041,7 +1043,6 @@
           body.appendChild(card);
         });
       }
-      pop.hidden = false;
       pop.classList.add("on");
     }
 
@@ -1049,7 +1050,6 @@
       const pop = $("dayPop");
       if (!pop) return;
       pop.classList.remove("on");
-      pop.hidden = true;
     }
 
     function jobCard(j, opensPop) {
