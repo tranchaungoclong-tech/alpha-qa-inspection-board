@@ -619,7 +619,7 @@
         </div>
       </div>
     </div>
-    <footer>v31. 20:05 Vietnam — tomorrow’s jobs to this PIC’s iPhone. Node server must stay up.</footer>
+    <footer>v31. 20:10 Vietnam — tomorrow’s jobs to this PIC’s iPhone. Node server must stay up.</footer>
   </div>
   <div class="toast-stack" id="toastStack"></div>
   <div class="day-pop" id="dayPop">
@@ -749,7 +749,7 @@
     }
     function pastEvening(n) {
       const t = n || vnNow();
-      return t.hour > 20 || (t.hour === 20 && t.minute >= 5);
+      return t.hour > 20 || (t.hour === 20 && t.minute >= 10);
     }
     function addDays(isoDate, n) {
       const [y, m, d] = isoDate.split("-").map(Number);
@@ -1788,7 +1788,7 @@
         </select>
         <button type="button" id="notifyBtn" class="${notifyOn?"on":""}">${notifyOn ? "Alerts on" : "Turn alerts on"}</button>
         <button type="button" id="testEveBtn">Test tonight</button>
-        <span class="who-note"><i class="dot-live ${live?"":"off"}"></i>${live ? "online" : "offline"} · 20:05 VN = tomorrow’s jobs · lock-screen ${push ? "via " + push : "needs Node server"}</span>`;
+        <span class="who-note"><i class="dot-live ${live?"":"off"}"></i>${live ? "online" : "offline"} · 20:10 VN = tomorrow’s jobs · lock-screen ${push ? "via " + push : "needs Node server"}</span>`;
       $("whoSel").onchange = e => {
         whoAmI = e.target.value;
         try { localStorage.setItem(LS_WHO, whoAmI); } catch (err) {}
