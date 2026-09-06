@@ -740,12 +740,11 @@
     const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
     const SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
     function vnNow() {
-      const parts = new Intl.DateTimeFormat("en-CA", {
-        timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit",
-        hour: "2-digit", minute: "2-digit", hourCycle: "h23"
-      }).formatToParts(new Date());
-      const get = t => parts.find(p => p.type === t).value;
-      return { date: `${get("year")}-${get("month")}-${get("day")}`, hour: Number(get("hour")), minute: Number(get("minute")) };
+      const d = new Date();
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return { date: `${y}-${m}-${day}`, hour: d.getHours(), minute: d.getMinutes() };
     }
     function addDays(isoDate, n) {
       const [y, m, d] = isoDate.split("-").map(Number);
