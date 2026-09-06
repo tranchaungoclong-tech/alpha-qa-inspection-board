@@ -16,7 +16,7 @@ Do **not** edit this GitHub repo to add inspections. GitHub only hosts the page.
 
 | File | Role |
 | --- | --- |
-| `index.html` | Board (v28 — equal-height donut row) |
+| `index.html` | Board (v29 — Pass/Fail header rings +40%) |
 | `sheet-config.js` | Published CSV URL |
 | `SHEET.md` | Form → CSV → Pages |
 
