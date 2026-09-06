@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="QA Board" />
-  <title>Alpha QA — Inspection Board v31</title>
+  <title>Alpha QA — Inspection Board v32</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon-192.png" type="image/png" />
   <link rel="apple-touch-icon" href="icon-180.png" />
@@ -118,9 +118,16 @@
     }
     .alerts .item { cursor: pointer; }
     .alerts .item.on { outline: 2px solid #EAB308; }
-    .who-bar {
+    .who-bar { display: none; }
+    @media (max-width: 820px) {
+      .who-bar {
+        display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+        margin: 0 0 10px; font-size: 12px; color: var(--muted);
+      }
+    }
+    .who-bar-inner {
       display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-      margin: 0 0 10px; font-size: 12px; color: var(--muted);
+      font-size: 12px; color: var(--muted);
     }
     .who-bar b { color: var(--ink); }
     .who-bar select {
@@ -478,7 +485,7 @@
     <header>
       <div>
         <h1>Full Month Calendar — <span class="month-name" id="monthName">September</span> <span class="year-name" id="yearName">2026</span></h1>
-        <div class="sub">v31 · Standard: <b>20 working days / month</b> · data: <b id="dataSrc">demo</b> · click <b>Year</b> for yearly summary</div>
+        <div class="sub">v32 · Standard: <b>20 working days / month</b> · data: <b id="dataSrc">demo</b> · click <b>Year</b> for yearly summary</div>
       </div>
       <div class="head-right">
         <div class="pf-kpis">
@@ -619,7 +626,7 @@
         </div>
       </div>
     </div>
-    <footer>v31. 20:10 Vietnam — tomorrow’s jobs to this PIC’s iPhone. Node server must stay up.</footer>
+    <footer>v32. PIC / alerts bar on phone only. 20:10 VN push unchanged.</footer>
   </div>
   <div class="toast-stack" id="toastStack"></div>
   <div class="day-pop" id="dayPop">
