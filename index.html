@@ -619,7 +619,7 @@
         </div>
       </div>
     </div>
-    <footer>v31. 20:00 VN reminder of tomorrow’s jobs. Lock-screen needs the Node push server.</footer>
+    <footer>v31. 20:05 Vietnam — tomorrow’s jobs to this PIC’s iPhone. Node server must stay up.</footer>
   </div>
   <div class="toast-stack" id="toastStack"></div>
   <div class="day-pop" id="dayPop">
@@ -740,11 +740,16 @@
     const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
     const SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
     function vnNow() {
-      const d = new Date();
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, "0");
-      const day = String(d.getDate()).padStart(2, "0");
-      return { date: `${y}-${m}-${day}`, hour: d.getHours(), minute: d.getMinutes() };
+      const parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit", hourCycle: "h23"
+      }).formatToParts(new Date());
+      const get = t => parts.find(p => p.type === t).value;
+      return { date: `${get("year")}-${get("month")}-${get("day")}`, hour: Number(get("hour")), minute: Number(get("minute")) };
+    }
+    function pastEvening(n) {
+      const t = n || vnNow();
+      return t.hour > 20 || (t.hour === 20 && t.minute >= 5);
     }
     function addDays(isoDate, n) {
       const [y, m, d] = isoDate.split("-").map(Number);
@@ -1719,7 +1724,7 @@
       if (eveningTimer) clearInterval(eveningTimer);
       const tick = () => {
         if (!whoAmI || !notifyOn) return;
-        if (vnNow().hour >= 20) fireTomorrowReminder(false);
+        if (pastEvening()) fireTomorrowReminder(false);
       };
       tick();
       eveningTimer = setInterval(tick, 60 * 1000);
@@ -1783,7 +1788,7 @@
         </select>
         <button type="button" id="notifyBtn" class="${notifyOn?"on":""}">${notifyOn ? "Alerts on" : "Turn alerts on"}</button>
         <button type="button" id="testEveBtn">Test tonight</button>
-        <span class="who-note"><i class="dot-live ${live?"":"off"}"></i>${live ? "online" : "offline"} · 20:00 VN = tomorrow’s jobs · lock-screen ${push ? "via " + push : "needs Node server"}</span>`;
+        <span class="who-note"><i class="dot-live ${live?"":"off"}"></i>${live ? "online" : "offline"} · 20:05 VN = tomorrow’s jobs · lock-screen ${push ? "via " + push : "needs Node server"}</span>`;
       $("whoSel").onchange = e => {
         whoAmI = e.target.value;
         try { localStorage.setItem(LS_WHO, whoAmI); } catch (err) {}

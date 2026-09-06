@@ -28,7 +28,9 @@ function safeFile(urlPath) {
   if (!fs.existsSync(abs) || fs.statSync(abs).isDirectory()) return null;
   return abs;
 }
+const TZ = "Asia/Ho_Chi_Minh";
 const HOUR = 20;
+const MINUTE = 5;
 const CSV = process.env.SHEET_CSV || "https://docs.google.com/spreadsheets/d/e/2PACX-1vRN1VuOjowpH_lX8LoyFOaXTQ97RDGMcUa4B_R031udAEPssjovgRHynFZVFQPPmRitFKopUZmUlAl5/pub?gid=2026108596&single=true&output=csv";
 
 fs.mkdirSync(DATA, { recursive: true });
@@ -56,10 +58,15 @@ let subs = loadJson(SUBS, []);
 let sent = loadJson(SENT, {});
 
 function vnParts(d = new Date()) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return { date: `${y}-${m}-${day}`, hour: d.getHours(), minute: d.getMinutes() };
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hourCycle: "h23"
+  }).formatToParts(d);
+  const get = t => parts.find(p => p.type === t).value;
+  return { date: `${get("year")}-${get("month")}-${get("day")}`, hour: Number(get("hour")), minute: Number(get("minute")) };
+}
+function pastEvening(n = vnParts()) {
+  return n.hour > HOUR || (n.hour === HOUR && n.minute >= MINUTE);
 }
 function addDays(isoDate, n) {
   const [y, m, d] = isoDate.split("-").map(Number);
@@ -207,8 +214,12 @@ const server = http.createServer(async (req, res) => {
       subs = subs.filter(s => s.subscription.endpoint !== subscription.endpoint);
       subs.push({ pic, subscription, at: new Date().toISOString() });
       saveJson(SUBS, subs);
+      let catchup = null;
+      if (pastEvening()) {
+        catchup = await eveningRun(pic);
+      }
       res.writeHead(200, { "content-type": "application/json" });
-      res.end(JSON.stringify({ ok: true, pic, n: subs.filter(s => s.pic === pic).length }));
+      res.end(JSON.stringify({ ok: true, pic, n: subs.filter(s => s.pic === pic).length, catchup }));
       return;
     }
     if (req.method === "POST" && url.pathname === "/test") {
@@ -247,8 +258,7 @@ server.listen(PORT, "0.0.0.0", () => {
 });
 
 function maybeEveningTick() {
-  const { hour } = vnParts();
-  if (hour >= HOUR) eveningRun().catch(err => console.log(err));
+  if (pastEvening()) eveningRun().catch(err => console.log(err));
 }
 setTimeout(maybeEveningTick, 8000);
 setInterval(maybeEveningTick, 60 * 1000);
