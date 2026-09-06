@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="QA Board" />
-  <title>Alpha QA — Inspection Board v33</title>
+  <title>Alpha QA — Inspection Board v34</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon-192.png" type="image/png" />
   <link rel="apple-touch-icon" href="icon-180.png" />
@@ -293,10 +293,11 @@
     .job.conflict-tag { background: #FEE2E2; color: var(--conflict-ink); font-weight: 600; border-left: 0; }
     .job .dur { font-weight: 600; color: var(--muted); font-size: 13px; }
     .ico { font-size: 14px; line-height: 1; }
-    .stamp { font-weight: 700; font-size: 13px; }
+    .stamp { font-weight: 700; font-size: 13px; cursor: pointer; border-radius: 6px; padding: 0 2px; }
     .stamp.ok { color: var(--pass); }
     .stamp.bad { color: var(--fail); }
     .stamp.wait { color: var(--warn); }
+    .stamp:hover { outline: 1px solid currentColor; }
     .re { font-size: 11px; color: var(--fail); font-weight: 700; }
     .side { display: flex; flex-direction: column; gap: 12px; }
     table.lb { width: 100%; border-collapse: collapse; }
@@ -479,7 +480,7 @@
     <header>
       <div>
         <h1>Full Month Calendar — <span class="month-name" id="monthName">September</span> <span class="year-name" id="yearName">2026</span></h1>
-        <div class="sub">v33 · Standard: <b>20 working days / month</b> · data: <b id="dataSrc">demo</b> · click <b>Year</b> for yearly summary</div>
+        <div class="sub">v34 · Standard: <b>20 working days / month</b> · data: <b id="dataSrc">demo</b> · click <b>Year</b> for yearly summary</div>
       </div>
       <div class="head-right">
         <div class="pf-kpis">
@@ -620,7 +621,7 @@
         </div>
       </div>
     </div>
-    <footer>v33. PIC / alerts bar hidden. 20:10 VN lock-screen push still runs in the background.</footer>
+    <footer>v34. Tap Pass / Fail / Pending to cycle. Version log on the server.</footer>
   </div>
   <div class="toast-stack" id="toastStack"></div>
   <div class="day-pop" id="dayPop">
@@ -894,13 +895,63 @@
         };
       }).filter(Boolean);
     }
+    let resultOverlays = {};
     function applyCsv(text, label) {
       const live = jobsFromCsv(text);
       if (!live.length) throw new Error("empty");
       JOBS = live;
+      applyResultOverlays();
       const src = $("dataSrc");
       if (src) src.textContent = label;
       return live;
+    }
+    function applyResultOverlays() {
+      JOBS.forEach(j => {
+        const ov = resultOverlays[jobKey(j)];
+        if (ov && ov.result) j.result = ov.result;
+      });
+    }
+    async function loadResultOverlays() {
+      const base = pushBase();
+      if (!base) return;
+      try {
+        const r = await fetch(base + "/results", { headers: { "Bypass-Tunnel-Reminder": "true" } });
+        if (!r.ok) return;
+        const data = await r.json();
+        resultOverlays = data.overlays || {};
+        applyResultOverlays();
+      } catch (e) {}
+    }
+    function cycleResult(cur) {
+      if (cur === "pass") return "fail";
+      if (cur === "fail") return "pending";
+      return "pass";
+    }
+    async function setJobResult(j, next) {
+      const key = jobKey(j);
+      const from = j.result || "";
+      j.result = next;
+      const by = whoAmI ? (pic(whoAmI) ? pic(whoAmI).name : whoAmI) : "staff";
+      const base = pushBase();
+      if (base) {
+        try {
+          const r = await fetch(base + "/result", {
+            method: "POST",
+            headers: { "content-type": "application/json", "Bypass-Tunnel-Reminder": "true" },
+            body: JSON.stringify({ key, result: next, from, by })
+          });
+          if (r.ok) {
+            const data = await r.json();
+            resultOverlays[key] = data.overlay;
+          }
+        } catch (e) {}
+      } else {
+        const hist = (resultOverlays[key] && resultOverlays[key].history) || [];
+        hist.push({ at: new Date().toISOString(), by, from, to: next });
+        resultOverlays[key] = { result: next, history: hist };
+        try { localStorage.setItem("qa-board-results", JSON.stringify(resultOverlays)); } catch (e) {}
+      }
+      render();
     }
     function cachedCsv() {
       try { return localStorage.getItem(LS_CSV) || ""; } catch (e) { return ""; }
@@ -1178,20 +1229,30 @@
       }
       const dur = j.days === 1 ? "1d" : "½d";
       const stamp = j.result === "pass"
-        ? `<span class="stamp ok">✅ Pass</span>`
+        ? `<span class="stamp ok" data-result="1">✅ Pass</span>`
         : j.result === "fail"
-          ? `<span class="stamp bad">❌ Fail</span>`
+          ? `<span class="stamp bad" data-result="1">❌ Fail</span>`
           : j.result === "pending"
-            ? `<span class="stamp wait">⏳ Pending</span>`
-            : "";
+            ? `<span class="stamp wait" data-result="1">⏳ Pending</span>`
+            : `<span class="stamp wait" data-result="1">⏳ Pending</span>`;
       const re = j.visit > 1 ? `<span class="re">(Re-inspect)</span>` : "";
       el.innerHTML = j.type === "leave"
         ? `<b>${p.name}</b><div class="row"><span class="ico">🌴</span> Annual leave</div>`
         : `<b>${p.name} <span class="dur">(${dur})</span></b>
            <div class="row"><span class="ico">🏭</span> ${j.factory} <span class="ico">👤</span> ${j.customer}${j.country && j.country !== "VN" ? ` · ${j.country}` : ""}</div>
            <div class="row"><span class="ico">📌</span> ${j.type[0].toUpperCase()+j.type.slice(1)} | ${stamp} ${re}</div>`;
+      const stampEl = el.querySelector("[data-result]");
+      if (stampEl && j.type !== "leave") {
+        stampEl.title = "Tap to cycle Pass → Fail → Pending";
+        stampEl.addEventListener("pointerup", ev => {
+          ev.stopPropagation();
+          ev.preventDefault();
+          setJobResult(j, cycleResult(j.result));
+        });
+      }
       if (opensPop) {
-        el.style.pointerEvents = "none";
+        el.querySelectorAll("b, .row, .ico, .dur, .re").forEach(n => { n.style.pointerEvents = "none"; });
+        if (stampEl) stampEl.style.pointerEvents = "auto";
       }
       return el;
     }
@@ -1931,7 +1992,8 @@
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     scheduleEveningWatch();
-    loadJobs().then(() => { render(); consumeAlertHash(); });
+    try { resultOverlays = JSON.parse(localStorage.getItem("qa-board-results") || "{}"); } catch (e) { resultOverlays = {}; }
+    loadJobs().then(() => loadResultOverlays()).then(() => { render(); consumeAlertHash(); });
   </script>
 </body>
 </html>

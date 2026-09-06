@@ -1,4 +1,4 @@
-const CACHE = "qa-board-v31b";
+const CACHE = "qa-board-v34";
 const PRECACHE = ["./", "./index.html", "./manifest.json", "./icon-180.png", "./icon-192.png"];
 
 self.addEventListener("install", event => {
@@ -22,7 +22,7 @@ self.addEventListener("fetch", event => {
   if (url.hostname.includes("google.com") || url.hostname.includes("googleapis.com") || url.hostname.includes("gstatic.com")) {
     return;
   }
-  if (url.pathname.endsWith("sheet-config.js") || url.pathname.endsWith("/subscribe") || url.pathname.endsWith("/vapidPublicKey") || url.pathname.endsWith("/health") || url.pathname.endsWith("/test")) {
+  if (url.pathname.endsWith("sheet-config.js") || url.pathname.endsWith("/subscribe") || url.pathname.endsWith("/vapidPublicKey") || url.pathname.endsWith("/health") || url.pathname.endsWith("/test") || url.pathname.endsWith("/results") || url.pathname.endsWith("/result")) {
     event.respondWith(fetch(req));
     return;
   }

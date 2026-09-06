@@ -9,6 +9,7 @@ const DATA = path.join(__dirname, "data");
 const SUBS = path.join(DATA, "subs.json");
 const SENT = path.join(DATA, "sent.json");
 const KEYS = path.join(DATA, "vapid.json");
+const RESULTS = path.join(DATA, "results.json");
 const PORT = Number(process.env.PORT || 8787);
 const ROOT = path.join(__dirname, "..");
 const MIME = {
@@ -56,6 +57,7 @@ function ensureVapid() {
 const vapid = ensureVapid();
 let subs = loadJson(SUBS, []);
 let sent = loadJson(SENT, {});
+let results = loadJson(RESULTS, {});
 
 function vnParts(d = new Date()) {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -240,6 +242,30 @@ const server = http.createServer(async (req, res) => {
       }
       res.writeHead(200, { "content-type": "application/json" });
       res.end(JSON.stringify({ ok: true, pic, n: subs.filter(s => s.pic === pic).length, catchup }));
+      return;
+    }
+    if (req.method === "GET" && url.pathname === "/results") {
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({ overlays: results }));
+      return;
+    }
+    if (req.method === "POST" && url.pathname === "/result") {
+      const body = await readBody(req);
+      const key = String(body.key || "").trim();
+      const next = String(body.result || "").toLowerCase();
+      const by = String(body.by || "staff").trim() || "staff";
+      if (!key || !["pass", "fail", "pending"].includes(next)) {
+        res.writeHead(400, { "content-type": "application/json" });
+        res.end(JSON.stringify({ error: "key + result pass|fail|pending" }));
+        return;
+      }
+      const prev = results[key] || { result: String(body.from || ""), history: [] };
+      const hist = Array.isArray(prev.history) ? prev.history.slice() : [];
+      hist.push({ at: new Date().toISOString(), by, from: prev.result || body.from || "", to: next });
+      results[key] = { result: next, history: hist.slice(-40) };
+      saveJson(RESULTS, results);
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({ ok: true, key, overlay: results[key] }));
       return;
     }
     if (req.method === "POST" && url.pathname === "/test") {
