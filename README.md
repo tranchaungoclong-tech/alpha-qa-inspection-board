@@ -16,7 +16,7 @@ Do **not** edit this GitHub repo to add inspections. GitHub only hosts the page.
 
 | File | Role |
 | --- | --- |
-| `index.html` | Board (v42 — centered web day popup; PWA ↻ busts CSV cache; green ↻ + blue Form +) |
+| `index.html` | Board (v43 — Leave rows off charts; centered web popup; PWA ↻; green ↻ + blue Form +) |
 | `sheet-config.js` | Published CSV URL + Form URL |
 | `sw.js` / `manifest.json` | Offline cache of the last visit |
 | `SHEET.md` | Form → CSV → Pages |

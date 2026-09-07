@@ -33,6 +33,7 @@ From **v42**, ↻ appends a unique query so Google’s published-CSV cache is le
 `date | pic | days | factory | customer | type | category | country | visit | result`
 
 - **type**: inline / final / sourcing / audit / leave
+- **leave**: if Type, Customer, Category, Result, or Factory is `Leave` / `Annual leave` / `AL` / `Off`, the row is leave. Calendar + alerts only. Not Occupancy, Quality, Factory, Client, Visit Type, Category, Map, or Pass rings — even if Factory is filled.
 - **country**: VN KH TH MY CN IN ID (CAM→KH, IND→IN)
 - **result**: pass / fail / pending (PIC stamps on the Form)
 - `style` / `job_id` optional (not shown on the calendar)

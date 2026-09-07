@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="QA Board" />
-  <title>Alpha QA — Inspection Board v42</title>
+  <title>Alpha QA — Inspection Board v43</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon-192.png" type="image/png" />
   <link rel="apple-touch-icon" href="icon-180.png" />
@@ -499,7 +499,7 @@
     <header>
       <div>
         <h1>Full Month Calendar — <span class="month-name" id="monthName">September</span> <span class="year-name" id="yearName">2026</span></h1>
-        <div class="sub">v42 · Standard: <b>20 working days / month</b> · data: <b id="dataSrc">demo</b> · click <b>Year</b> for yearly summary · green <b>↻</b> + blue <b>+</b> sit on the calendar</div>
+        <div class="sub">v43 · Standard: <b>20 working days / month</b> · data: <b id="dataSrc">demo</b> · click <b>Year</b> for yearly summary · Leave rows stay off charts</div>
       </div>
       <div class="head-right">
         <div class="pf-kpis">
@@ -643,7 +643,7 @@
         </div>
       </div>
     </div>
-    <footer>v42. Web day popup is centered. Phone popup stays at the bottom. ↻ pulls gviz (faster than published CSV). Form publish can still lag ~1 min. file:// will not live-sync.</footer>
+    <footer>v43. Leave in Type / Customer / Category / Result is calendar + alerts only — not Occupancy, Quality, Factory, Client, Visit Type, Category, Map, or Pass rings. file:// will not live-sync.</footer>
   </div>
   <div class="day-pop" id="dayPop">
     <div class="day-pop-card" role="dialog" aria-modal="true">
@@ -657,7 +657,7 @@
   </div>
 
   <iframe name="qaFormSink" id="qaFormSink" title="form sink" style="position:absolute;width:0;height:0;border:0;visibility:hidden"></iframe>
-  <script src="sheet-config.js?v=42"></script>
+  <script src="sheet-config.js?v=43"></script>
   <script>
     const PEOPLE = [
       { id: "philip", name: "Philip", color: "#FB7185" },
@@ -876,26 +876,32 @@
       const iRes = col(head, ["result", "resut"]);
       return rows.slice(1).map(r => {
         const get = i => (i >= 0 ? String(r[i] || "").trim() : "");
-        const type = get(iType).toLowerCase();
+        const isLeaveWord = v => /^leave$|^annual\s*leave$|^off$|^al$/i.test(String(v || "").trim());
+        let type = get(iType).toLowerCase();
         const result = get(iRes).toLowerCase();
+        const factory = get(iFac);
+        const customer = get(iCust);
+        const category = get(iCat);
+        if (isLeaveWord(type) || isLeaveWord(customer) || isLeaveWord(category) || isLeaveWord(result) || isLeaveWord(factory)) {
+          type = "leave";
+        }
         const country = mapCountry(get(iCty) || "VN");
         const date = parseDateCell(get(iDate));
         if (!date || !get(iPic)) return null;
         const picName = get(iPic);
-        const factory = get(iFac);
         const visitRaw = get(iVisit).replace(/[^\d.]/g, "");
         return {
           date,
           pic: ensurePic(picName),
           days: Number(get(iDays)) || 1,
-          factory,
-          customer: get(iCust),
+          factory: type === "leave" ? "" : factory,
+          customer: type === "leave" ? "" : customer,
           type: type || "final",
-          category: get(iCat),
+          category: type === "leave" ? "" : category,
           country,
           style: get(iStyle),
-          result,
-          job: get(iJob) || `${picName}-${date}-${factory}`,
+          result: type === "leave" ? "" : result,
+          job: get(iJob) || `${picName}-${date}-${type === "leave" ? "leave" : factory}`,
           visit: Number(visitRaw) || 1
         };
       }).filter(Boolean);
@@ -1494,6 +1500,7 @@
       const bag = {};
       let inline = 0, fin = 0;
       jobs.forEach(j => {
+        if (j.type === "leave") return;
         const name = j[key];
         if (!name) return;
         bag[name] ||= { days: 0, inline: 0, final: 0 };
