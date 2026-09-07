@@ -16,7 +16,7 @@ Do **not** edit this GitHub repo to add inspections. GitHub only hosts the page.
 
 | File | Role |
 | --- | --- |
-| `index.html` | Board (v40 — compact phone Pass/Fail chip; PWA pulls live Sheet on resume; + Google Form) |
+| `index.html` | Board (v41 — green ↻ + blue Form + on the calendar; compact Pass/Fail chip; PWA live Sheet) |
 | `sheet-config.js` | Published CSV URL + Form URL |
 | `sw.js` / `manifest.json` | Offline cache of the last visit |
 | `SHEET.md` | Form → CSV → Pages |

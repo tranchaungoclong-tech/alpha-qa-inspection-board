@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="QA Board" />
-  <title>Alpha QA — Inspection Board v40</title>
+  <title>Alpha QA — Inspection Board v41</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon-192.png" type="image/png" />
   <link rel="apple-touch-icon" href="icon-180.png" />
@@ -368,15 +368,22 @@
     .year-block { margin-top: 18px; }
     .year-block h3 { margin: 0 0 8px; font-size: 14px; }
     footer { margin-top: 12px; color: var(--muted); font-size: 11px; }
-    .form-plus {
-      display: inline-flex; align-items: center; justify-content: center;
-      width: 52px; height: 52px; border-radius: 14px;
-      background: var(--red); color: #fff; text-decoration: none;
-      font: 700 28px/1 "IBM Plex Sans", sans-serif;
-      box-shadow: var(--shadow); flex: 0 0 auto;
+    .cal-tools {
+      display: flex; align-items: center; justify-content: flex-start; gap: 8px;
+      margin-bottom: 10px;
     }
-    .form-plus:hover { filter: brightness(1.06); color: #fff; }
-    .nav button.refresh { font-size: 20px; }
+    .cal-tools .refresh, .form-plus {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 44px; height: 44px; border-radius: 12px;
+      color: #fff; text-decoration: none;
+      font: 700 22px/1 "IBM Plex Sans", sans-serif;
+      box-shadow: var(--shadow); flex: 0 0 auto; cursor: pointer; border: 0;
+    }
+    .cal-tools .refresh {
+      background: #22C55E; font-size: 20px;
+    }
+    .form-plus { background: #2563EB; font-size: 26px; }
+    .cal-tools .refresh:hover, .form-plus:hover { filter: brightness(1.06); color: #fff; }
     .day-pop-head .form-plus {
       width: 40px; height: 40px; border-radius: 20px; font-size: 26px;
       margin-left: auto;
@@ -418,7 +425,9 @@
       .nav { gap: 4px; }
       .nav button { min-width: 36px; min-height: 36px; padding: 6px 8px; font-size: 14px; border-radius: 10px; }
       .nav #monthBtn, .nav #yearBtn { min-width: 56px; font-size: 15px; }
-      .form-plus { width: 36px; height: 36px; font-size: 22px; border-radius: 10px; }
+      .cal-tools { margin-bottom: 8px; gap: 6px; }
+      .cal-tools .refresh, .form-plus { width: 36px; height: 36px; font-size: 20px; border-radius: 10px; }
+      .form-plus { font-size: 22px; }
       .filters {
         position: sticky; top: 0; z-index: 30;
         gap: 4px; padding: 8px;
@@ -482,7 +491,7 @@
     <header>
       <div>
         <h1>Full Month Calendar — <span class="month-name" id="monthName">September</span> <span class="year-name" id="yearName">2026</span></h1>
-        <div class="sub">v40 · Standard: <b>20 working days / month</b> · data: <b id="dataSrc">demo</b> · click <b>Year</b> for yearly summary · <b>+</b> opens Google Form · <b>↻</b> pulls live Sheet</div>
+        <div class="sub">v41 · Standard: <b>20 working days / month</b> · data: <b id="dataSrc">demo</b> · click <b>Year</b> for yearly summary · green <b>↻</b> + blue <b>+</b> sit on the calendar</div>
       </div>
       <div class="head-right">
         <div class="pf-kpis">
@@ -509,8 +518,6 @@
             <div class="year-menu" id="yearMenu"></div>
           </div>
           <button id="next" aria-label="Next month">›</button>
-          <button type="button" class="refresh" id="refreshBtn" title="Pull live Sheet" aria-label="Refresh live Sheet">↻</button>
-          <a class="form-plus" id="formPlus" href="#" target="_blank" rel="noopener noreferrer" title="Add inspection (Google Form)" aria-label="Add inspection">+</a>
         </div>
       </div>
     </header>
@@ -520,6 +527,10 @@
     <div class="grid">
       <div class="main">
         <section class="card cal-card">
+          <div class="cal-tools">
+            <button type="button" class="refresh" id="refreshBtn" title="Pull live Sheet" aria-label="Refresh live Sheet">↻</button>
+            <a class="form-plus" id="formPlus" href="#" target="_blank" rel="noopener noreferrer" title="Add inspection (Google Form)" aria-label="Add inspection">+</a>
+          </div>
           <div class="weekdays">
             <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
           </div>
@@ -624,7 +635,7 @@
         </div>
       </div>
     </div>
-    <footer>v40. Phone Pass / Fail / Pending chip is compact in the day popup. PWA pulls the live Sheet when you reopen the app. Tap ↻ if the phone still shows an old stamp. + opens Google Form. file:// will not live-sync.</footer>
+    <footer>v41. Green ↻ and blue + sit left, on the calendar. + opens Google Form. ↻ pulls the live Sheet. file:// will not live-sync.</footer>
   </div>
   <div class="day-pop" id="dayPop">
     <div class="day-pop-card" role="dialog" aria-modal="true">
@@ -638,7 +649,7 @@
   </div>
 
   <iframe name="qaFormSink" id="qaFormSink" title="form sink" style="position:absolute;width:0;height:0;border:0;visibility:hidden"></iframe>
-  <script src="sheet-config.js?v=40"></script>
+  <script src="sheet-config.js?v=41"></script>
   <script>
     const PEOPLE = [
       { id: "philip", name: "Philip", color: "#FB7185" },
