@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="QA Board" />
-  <title>Alpha QA — Inspection Board v41</title>
+  <title>Alpha QA — Inspection Board v42</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon-192.png" type="image/png" />
   <link rel="apple-touch-icon" href="icon-180.png" />
@@ -180,15 +180,16 @@
     .day-pop {
       display: none; position: fixed; inset: 0; z-index: 200;
       background: rgba(15,23,42,.5);
-      align-items: flex-end; justify-content: center;
+      align-items: center; justify-content: center;
+      padding: 24px;
       -webkit-tap-highlight-color: transparent;
     }
     .day-pop.on { display: flex !important; }
     .day-pop-card {
-      width: min(520px, 100%); max-height: 82vh; overflow: auto;
-      background: #fff; border-radius: 18px 18px 0 0;
-      padding: 16px 16px max(20px, env(safe-area-inset-bottom));
-      box-shadow: 0 -8px 30px rgba(15,23,42,.18);
+      width: min(480px, 92vw); max-height: 78vh; overflow: auto;
+      background: #fff; border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 18px 48px rgba(15,23,42,.22);
     }
     .day-pop-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
     .day-pop-head b { font-size: 18px; }
@@ -482,7 +483,14 @@
       .card { padding: 12px; border-radius: 12px; }
       .card h2 { font-size: 13px; margin-bottom: 8px; padding-bottom: 6px; }
       .day { cursor: pointer; }
-      .day-pop-card { width: 100%; }
+      .day-pop {
+        align-items: flex-end; justify-content: center; padding: 0;
+      }
+      .day-pop-card {
+        width: 100%; max-height: 82vh; border-radius: 18px 18px 0 0;
+        padding: 16px 16px max(20px, env(safe-area-inset-bottom));
+        box-shadow: 0 -8px 30px rgba(15,23,42,.18);
+      }
     }
   </style>
 </head>
@@ -491,7 +499,7 @@
     <header>
       <div>
         <h1>Full Month Calendar — <span class="month-name" id="monthName">September</span> <span class="year-name" id="yearName">2026</span></h1>
-        <div class="sub">v41 · Standard: <b>20 working days / month</b> · data: <b id="dataSrc">demo</b> · click <b>Year</b> for yearly summary · green <b>↻</b> + blue <b>+</b> sit on the calendar</div>
+        <div class="sub">v42 · Standard: <b>20 working days / month</b> · data: <b id="dataSrc">demo</b> · click <b>Year</b> for yearly summary · green <b>↻</b> + blue <b>+</b> sit on the calendar</div>
       </div>
       <div class="head-right">
         <div class="pf-kpis">
@@ -635,7 +643,7 @@
         </div>
       </div>
     </div>
-    <footer>v41. Green ↻ and blue + sit left, on the calendar. + opens Google Form. ↻ pulls the live Sheet. file:// will not live-sync.</footer>
+    <footer>v42. Web day popup is centered. Phone popup stays at the bottom. ↻ pulls gviz (faster than published CSV). Form publish can still lag ~1 min. file:// will not live-sync.</footer>
   </div>
   <div class="day-pop" id="dayPop">
     <div class="day-pop-card" role="dialog" aria-modal="true">
@@ -649,7 +657,7 @@
   </div>
 
   <iframe name="qaFormSink" id="qaFormSink" title="form sink" style="position:absolute;width:0;height:0;border:0;visibility:hidden"></iframe>
-  <script src="sheet-config.js?v=41"></script>
+  <script src="sheet-config.js?v=42"></script>
   <script>
     const PEOPLE = [
       { id: "philip", name: "Philip", color: "#FB7185" },
@@ -1054,6 +1062,20 @@
         localStorage.setItem(LS_CSV_AT, new Date().toISOString());
       } catch (e) {}
     }
+    function csvGid(url) {
+      try { return new URL(url).searchParams.get("gid") || "0"; } catch (e) { return "0"; }
+    }
+    function gvizUrl(csvUrl) {
+      const gid = csvGid(csvUrl);
+      return "https://docs.google.com/spreadsheets/d/e/2PACX-1vRN1VuOjowpH_lX8LoyFOaXTQ97RDGMcUa4B_R031udAEPssjovgRHynFZVFQPPmRitFKopUZmUlAl5/pub?gid=" + gid + "&single=true&output=csv&t=" + Date.now() + "&r=" + Math.random().toString(36).slice(2);
+    }
+    async function fetchText(url) {
+      const res = await fetch(url, { cache: "no-store", mode: "cors", credentials: "omit" });
+      if (!res.ok) throw new Error(res.status);
+      const text = await res.text();
+      if (!text || !text.trim()) throw new Error("empty");
+      return text;
+    }
     async function loadJobs() {
       const src = $("dataSrc");
       const url = String(window.SHEET_CSV || "").trim();
@@ -1062,25 +1084,28 @@
         if (src) src.textContent = "demo (paste SHEET_CSV to go live)";
         return;
       }
-      try {
-        const res = await fetch(url + (url.includes("?") ? "&" : "?") + "t=" + Date.now(), { cache: "no-store" });
-        if (!res.ok) throw new Error(res.status);
-        const text = await res.text();
-        applyCsv(text, "live Sheet");
-        saveCsvCache(text);
-      } catch (err) {
-        const cached = cachedCsv();
-        if (cached) {
-          try {
-            const at = (function() { try { return localStorage.getItem(LS_CSV_AT) || ""; } catch (e) { return ""; } })();
-            const when = at ? at.slice(0, 16).replace("T", " ") : "last save";
-            applyCsv(cached, "offline cache · " + when);
-            return;
-          } catch (e2) {}
-        }
-        JOBS = DEMO_JOBS.slice();
-        if (src) src.textContent = "demo (Sheet fetch failed)";
+      const urls = [gvizUrl(url), url + (url.includes("?") ? "&" : "?") + "t=" + Date.now() + "&nocache=1"];
+      let lastErr = null;
+      for (let i = 0; i < urls.length; i++) {
+        try {
+          const text = await fetchText(urls[i]);
+          applyCsv(text, i === 0 ? "live Sheet" : "live Sheet (csv)");
+          saveCsvCache(text);
+          return;
+        } catch (err) { lastErr = err; }
       }
+      const cached = cachedCsv();
+      if (cached) {
+        try {
+          const at = (function() { try { return localStorage.getItem(LS_CSV_AT) || ""; } catch (e) { return ""; } })();
+          const when = at ? at.slice(0, 16).replace("T", " ") : "last save";
+          applyCsv(cached, "offline cache · " + when);
+          return;
+        } catch (e2) {}
+      }
+      JOBS = DEMO_JOBS.slice();
+      if (src) src.textContent = "demo (Sheet fetch failed)";
+      void lastErr;
     }
     function refreshLive() {
       const src = $("dataSrc");

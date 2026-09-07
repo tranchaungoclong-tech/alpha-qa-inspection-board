@@ -24,6 +24,8 @@ From **v38**, the board **+** opens the Form. Stamping Pass / Fail / Pending on 
 
 From **v39**, the iPhone Home Screen app pulls the live Sheet when you reopen it. Tap **↻** if the phone still shows an old stamp. Local overlay does not hide a newer GitHub / other-phone stamp.
 
+From **v42**, ↻ appends a unique query so Google’s published-CSV cache is less likely to serve a 5-minute-old file. Form → publish can still take ~1 min. Desktop day popup is centered; phone stays a bottom sheet.
+
 `file://` cannot fetch Google CSV. Live board needs http(s).
 
 ## Columns the board reads
