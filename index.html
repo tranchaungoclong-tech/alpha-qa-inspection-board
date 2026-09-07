@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="QA Board" />
-  <title>Alpha QA — Inspection Board v43</title>
+  <title>Alpha QA — Inspection Board v44</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon-192.png" type="image/png" />
   <link rel="apple-touch-icon" href="icon-180.png" />
@@ -499,7 +499,7 @@
     <header>
       <div>
         <h1>Full Month Calendar — <span class="month-name" id="monthName">September</span> <span class="year-name" id="yearName">2026</span></h1>
-        <div class="sub">v43 · Standard: <b>20 working days / month</b> · data: <b id="dataSrc">demo</b> · click <b>Year</b> for yearly summary · Leave rows stay off charts</div>
+        <div class="sub">v44 · Standard: <b>20 working days / month</b> · data: <b id="dataSrc">demo</b> · click <b>Year</b> for yearly summary · ↻ follows the Sheet</div>
       </div>
       <div class="head-right">
         <div class="pf-kpis">
@@ -643,7 +643,7 @@
         </div>
       </div>
     </div>
-    <footer>v43. Leave in Type / Customer / Category / Result is calendar + alerts only — not Occupancy, Quality, Factory, Client, Visit Type, Category, Map, or Pass rings. file:// will not live-sync.</footer>
+    <footer>v44. ↻ follows the live Sheet (GitHub reverse Pass↔Pending shows). Leave Type stays off charts. file:// will not live-sync.</footer>
   </div>
   <div class="day-pop" id="dayPop">
     <div class="day-pop-card" role="dialog" aria-modal="true">
@@ -921,17 +921,24 @@
       return [...map.values()];
     }
     let resultOverlays = {};
-    function applyCsv(text, label) {
+    let lastCsvText = "";
+    function csvFingerprint(text) {
+      return String(text || "").replace(/\r\n/g, "\n").trim();
+    }
+    function applyCsv(text, label, opts) {
       const live = coalesceJobs(jobsFromCsv(text));
       if (!live.length) throw new Error("empty");
       JOBS = live;
-      applyResultOverlays();
+      lastCsvText = csvFingerprint(text);
+      applyResultOverlays(opts);
       const src = $("dataSrc");
       if (src) src.textContent = label;
       return live;
     }
-    function applyResultOverlays() {
+    function applyResultOverlays(opts) {
+      const trustSheet = !!(opts && opts.trustSheet);
       const now = Date.now();
+      const csvNow = lastCsvText;
       let dirty = false;
       JOBS.forEach(j => {
         const key = jobKey(j);
@@ -942,12 +949,17 @@
           dirty = true;
           return;
         }
-        const hist = ov.history || [];
-        const from = hist.length ? hist[hist.length - 1].from : "";
         const age = ov.at ? (now - Date.parse(ov.at)) : Infinity;
-        const csvStillOld = !j.result || j.result === from;
-        if (age < 10 * 60 * 1000 && csvStillOld) j.result = ov.result;
-        else {
+        const csvChanged = ov.csv && ov.csv !== csvNow;
+        if (trustSheet || csvChanged || age >= 10 * 60 * 1000) {
+          delete resultOverlays[key];
+          dirty = true;
+          return;
+        }
+        j.result = ov.result;
+      });
+      Object.keys(resultOverlays).forEach(key => {
+        if (!JOBS.some(j => jobKey(j) === key)) {
           delete resultOverlays[key];
           dirty = true;
         }
@@ -1053,7 +1065,7 @@
       const hist = (resultOverlays[key] && resultOverlays[key].history) || [];
       const at = new Date().toISOString();
       hist.push({ at, by: "staff", from, to: next });
-      resultOverlays[key] = { result: next, at, history: hist };
+      resultOverlays[key] = { result: next, at, history: hist, csv: lastCsvText };
       try { localStorage.setItem("qa-board-results", JSON.stringify(resultOverlays)); } catch (e) {}
       render();
       try { postResultToForm(j, next); } catch (e) {}
@@ -1082,7 +1094,7 @@
       if (!text || !text.trim()) throw new Error("empty");
       return text;
     }
-    async function loadJobs() {
+    async function loadJobs(opts) {
       const src = $("dataSrc");
       const url = String(window.SHEET_CSV || "").trim();
       if (!url) {
@@ -1095,7 +1107,7 @@
       for (let i = 0; i < urls.length; i++) {
         try {
           const text = await fetchText(urls[i]);
-          applyCsv(text, i === 0 ? "live Sheet" : "live Sheet (csv)");
+          applyCsv(text, i === 0 ? "live Sheet" : "live Sheet (csv)", opts);
           saveCsvCache(text);
           return;
         } catch (err) { lastErr = err; }
@@ -1105,7 +1117,7 @@
         try {
           const at = (function() { try { return localStorage.getItem(LS_CSV_AT) || ""; } catch (e) { return ""; } })();
           const when = at ? at.slice(0, 16).replace("T", " ") : "last save";
-          applyCsv(cached, "offline cache · " + when);
+          applyCsv(cached, "offline cache · " + when, opts);
           return;
         } catch (e2) {}
       }
@@ -1113,10 +1125,10 @@
       if (src) src.textContent = "demo (Sheet fetch failed)";
       void lastErr;
     }
-    function refreshLive() {
+    function refreshLive(opts) {
       const src = $("dataSrc");
       if (src) src.textContent = "pulling Sheet…";
-      return loadJobs().then(render);
+      return loadJobs(opts).then(render);
     }
 
     function monthJobs() {
@@ -1951,7 +1963,7 @@
     $("dayPopPlus").onclick = ev => ev.stopPropagation();
     $("dayPop").onclick = ev => { if (ev.target.id === "dayPop") closeDayPop(); };
     document.addEventListener("keydown", ev => { if (ev.key === "Escape") closeDayPop(); });
-    $("refreshBtn").onclick = () => { refreshLive(); };
+    $("refreshBtn").onclick = () => { refreshLive({ trustSheet: true }); };
     window.addEventListener("online", () => { refreshLive(); });
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible") refreshLive();
