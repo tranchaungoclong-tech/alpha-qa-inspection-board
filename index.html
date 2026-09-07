@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="QA Board" />
-  <title>Alpha QA — Inspection Board v39</title>
+  <title>Alpha QA — Inspection Board v40</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon-192.png" type="image/png" />
   <link rel="apple-touch-icon" href="icon-180.png" />
@@ -199,7 +199,7 @@
     .day-pop-body { display: flex; flex-direction: column; gap: 8px; }
     .day-pop-body .job { font-size: 14px; padding: 10px 10px 10px 12px; }
     .day-pop-body .job b { font-size: 16px; white-space: normal; overflow: visible; }
-    .day-pop-body .job .row { white-space: normal; overflow: visible; text-overflow: unset; display: flex; }
+    .day-pop-body .job .row { white-space: normal; overflow: visible; text-overflow: unset; display: flex; align-items: center; flex-wrap: wrap; }
     .day-pop-body .job .ico { display: inline; }
     .day-pop-empty { color: var(--muted); font-size: 14px; padding: 8px 2px; }
     .donuts .card {
@@ -273,11 +273,11 @@
     .stamp.wait { color: var(--warn); background: #FFFBEB; border-color: #FDE68A; }
     select.stamp-sel {
       appearance: none; -webkit-appearance: none;
-      font: 700 15px/1.2 "IBM Plex Sans", sans-serif;
-      border-radius: 8px; padding: 8px 28px 8px 10px;
-      min-height: 44px; min-width: 132px;
-      border: 1px solid var(--line); background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%2364748B' stroke-width='1.6'/%3E%3C/svg%3E") no-repeat right 10px center;
-      color: var(--ink); cursor: pointer;
+      font: 700 12px/1.2 "IBM Plex Sans", sans-serif;
+      border-radius: 6px; padding: 3px 18px 3px 7px;
+      min-height: 0; min-width: 0; width: auto; max-width: 118px;
+      border: 1px solid var(--line); background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2364748B' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 6px center;
+      color: var(--ink); cursor: pointer; vertical-align: middle;
     }
     select.stamp-sel.ok { color: var(--pass); background-color: #ECFDF5; border-color: #BBF7D0; }
     select.stamp-sel.bad { color: var(--fail); background-color: #FFF1F2; border-color: #FECDD3; }
@@ -444,7 +444,12 @@
       .job .row { gap: 2px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
       .job .dur, .stamp, .re { font-size: 9px; }
       .stamp { padding: 1px 4px; }
-      .day-pop-body select.stamp-sel { font-size: 16px; min-height: 44px; width: 100%; max-width: 220px; }
+      .day-pop-body select.stamp-sel {
+        font-size: 12px; min-height: 28px; height: 28px; line-height: 22px;
+        width: auto; max-width: 112px; min-width: 0;
+        padding: 2px 16px 2px 6px; border-radius: 6px;
+        background-position: right 5px center;
+      }
       .job .ico { display: none; }
       .under-cal { width: 100%; max-width: 400px; grid-template-columns: 1fr; }
       .under-cal > .card { width: 100%; }
@@ -477,7 +482,7 @@
     <header>
       <div>
         <h1>Full Month Calendar — <span class="month-name" id="monthName">September</span> <span class="year-name" id="yearName">2026</span></h1>
-        <div class="sub">v39 · Standard: <b>20 working days / month</b> · data: <b id="dataSrc">demo</b> · click <b>Year</b> for yearly summary · <b>+</b> opens Google Form · <b>↻</b> pulls live Sheet</div>
+        <div class="sub">v40 · Standard: <b>20 working days / month</b> · data: <b id="dataSrc">demo</b> · click <b>Year</b> for yearly summary · <b>+</b> opens Google Form · <b>↻</b> pulls live Sheet</div>
       </div>
       <div class="head-right">
         <div class="pf-kpis">
@@ -619,7 +624,7 @@
         </div>
       </div>
     </div>
-    <footer>v39. PWA pulls the live Sheet when you reopen the app. Tap ↻ if the phone still shows an old stamp. + opens Google Form. Pass / Fail / Pending posts a new Form row (~1–2 min). file:// will not live-sync.</footer>
+    <footer>v40. Phone Pass / Fail / Pending chip is compact in the day popup. PWA pulls the live Sheet when you reopen the app. Tap ↻ if the phone still shows an old stamp. + opens Google Form. file:// will not live-sync.</footer>
   </div>
   <div class="day-pop" id="dayPop">
     <div class="day-pop-card" role="dialog" aria-modal="true">
@@ -633,7 +638,7 @@
   </div>
 
   <iframe name="qaFormSink" id="qaFormSink" title="form sink" style="position:absolute;width:0;height:0;border:0;visibility:hidden"></iframe>
-  <script src="sheet-config.js?v=39"></script>
+  <script src="sheet-config.js?v=40"></script>
   <script>
     const PEOPLE = [
       { id: "philip", name: "Philip", color: "#FB7185" },
@@ -1308,9 +1313,9 @@
       const cur = resultValue(j.result);
       const stamp = editable && j.type !== "leave"
         ? `<select class="stamp-sel ${sm.cls}" data-result="1" aria-label="Inspection result">
-             <option value="pass"${cur === "pass" ? " selected" : ""}>✅ Pass</option>
-             <option value="fail"${cur === "fail" ? " selected" : ""}>❌ Fail</option>
-             <option value="pending"${cur === "pending" ? " selected" : ""}>⏳ Pending</option>
+             <option value="pass"${cur === "pass" ? " selected" : ""}>Pass</option>
+             <option value="fail"${cur === "fail" ? " selected" : ""}>Fail</option>
+             <option value="pending"${cur === "pending" ? " selected" : ""}>Pending</option>
            </select>`
         : `<span class="stamp ${sm.cls}">${sm.label}</span>`;
       const re = j.visit > 1 ? `<span class="re">(Re-inspect)</span>` : "";
