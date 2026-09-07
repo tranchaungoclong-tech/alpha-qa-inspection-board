@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="QA Board" />
-  <title>Alpha QA — Inspection Board v44</title>
+  <title>Alpha QA — Inspection Board v45</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon-192.png" type="image/png" />
   <link rel="apple-touch-icon" href="icon-180.png" />
@@ -499,7 +499,7 @@
     <header>
       <div>
         <h1>Full Month Calendar — <span class="month-name" id="monthName">September</span> <span class="year-name" id="yearName">2026</span></h1>
-        <div class="sub">v44 · Standard: <b>20 working days / month</b> · data: <b id="dataSrc">demo</b> · click <b>Year</b> for yearly summary · ↻ follows the Sheet</div>
+        <div class="sub">v45 · Standard: <b>20 working days / month</b> · data: <b id="dataSrc">demo</b> · click <b>Year</b> for yearly summary · ↻ keeps your stamp until CSV updates</div>
       </div>
       <div class="head-right">
         <div class="pf-kpis">
@@ -643,7 +643,7 @@
         </div>
       </div>
     </div>
-    <footer>v44. ↻ follows the live Sheet (GitHub reverse Pass↔Pending shows). Leave Type stays off charts. file:// will not live-sync.</footer>
+    <footer>v45. ↻ pulls CSV but keeps your stamp until Google publishes a new row. Leave Type stays off charts. file:// will not live-sync.</footer>
   </div>
   <div class="day-pop" id="dayPop">
     <div class="day-pop-card" role="dialog" aria-modal="true">
@@ -925,18 +925,17 @@
     function csvFingerprint(text) {
       return String(text || "").replace(/\r\n/g, "\n").trim();
     }
-    function applyCsv(text, label, opts) {
+    function applyCsv(text, label) {
       const live = coalesceJobs(jobsFromCsv(text));
       if (!live.length) throw new Error("empty");
       JOBS = live;
       lastCsvText = csvFingerprint(text);
-      applyResultOverlays(opts);
+      applyResultOverlays();
       const src = $("dataSrc");
       if (src) src.textContent = label;
       return live;
     }
-    function applyResultOverlays(opts) {
-      const trustSheet = !!(opts && opts.trustSheet);
+    function applyResultOverlays() {
       const now = Date.now();
       const csvNow = lastCsvText;
       let dirty = false;
@@ -951,7 +950,7 @@
         }
         const age = ov.at ? (now - Date.parse(ov.at)) : Infinity;
         const csvChanged = ov.csv && ov.csv !== csvNow;
-        if (trustSheet || csvChanged || age >= 10 * 60 * 1000) {
+        if (csvChanged || age >= 10 * 60 * 1000) {
           delete resultOverlays[key];
           dirty = true;
           return;
@@ -1094,7 +1093,7 @@
       if (!text || !text.trim()) throw new Error("empty");
       return text;
     }
-    async function loadJobs(opts) {
+    async function loadJobs() {
       const src = $("dataSrc");
       const url = String(window.SHEET_CSV || "").trim();
       if (!url) {
@@ -1107,7 +1106,7 @@
       for (let i = 0; i < urls.length; i++) {
         try {
           const text = await fetchText(urls[i]);
-          applyCsv(text, i === 0 ? "live Sheet" : "live Sheet (csv)", opts);
+          applyCsv(text, i === 0 ? "live Sheet" : "live Sheet (csv)");
           saveCsvCache(text);
           return;
         } catch (err) { lastErr = err; }
@@ -1117,7 +1116,7 @@
         try {
           const at = (function() { try { return localStorage.getItem(LS_CSV_AT) || ""; } catch (e) { return ""; } })();
           const when = at ? at.slice(0, 16).replace("T", " ") : "last save";
-          applyCsv(cached, "offline cache · " + when, opts);
+          applyCsv(cached, "offline cache · " + when);
           return;
         } catch (e2) {}
       }
@@ -1125,10 +1124,10 @@
       if (src) src.textContent = "demo (Sheet fetch failed)";
       void lastErr;
     }
-    function refreshLive(opts) {
+    function refreshLive() {
       const src = $("dataSrc");
       if (src) src.textContent = "pulling Sheet…";
-      return loadJobs(opts).then(render);
+      return loadJobs().then(render);
     }
 
     function monthJobs() {
@@ -1963,7 +1962,7 @@
     $("dayPopPlus").onclick = ev => ev.stopPropagation();
     $("dayPop").onclick = ev => { if (ev.target.id === "dayPop") closeDayPop(); };
     document.addEventListener("keydown", ev => { if (ev.key === "Escape") closeDayPop(); });
-    $("refreshBtn").onclick = () => { refreshLive({ trustSheet: true }); };
+    $("refreshBtn").onclick = () => { refreshLive(); };
     window.addEventListener("online", () => { refreshLive(); });
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible") refreshLive();
