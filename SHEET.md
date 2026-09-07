@@ -20,6 +20,8 @@ window.SHEET_CSV = "https://docs.google.com/spreadsheets/d/e/.../pub?gid=...&sin
 
 Staff change a Form row → wait ~1–2 min → refresh Pages → board updates.
 
+From **v38**, the board **+** opens the Form. Stamping Pass / Fail / Pending on a visit posts a **new Form row** (does not edit the old one). Other devices see the latest stamp after CSV refresh (~1–2 min). Duplicate rows for the same visit are coalesced — latest result wins.
+
 `file://` cannot fetch Google CSV. Live board needs http(s).
 
 ## Columns the board reads

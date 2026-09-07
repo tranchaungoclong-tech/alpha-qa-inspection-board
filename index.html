@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="QA Board" />
-  <title>Alpha QA — Inspection Board v37</title>
+  <title>Alpha QA — Inspection Board v38</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon-192.png" type="image/png" />
   <link rel="apple-touch-icon" href="icon-180.png" />
@@ -368,6 +368,18 @@
     .year-block { margin-top: 18px; }
     .year-block h3 { margin: 0 0 8px; font-size: 14px; }
     footer { margin-top: 12px; color: var(--muted); font-size: 11px; }
+    .form-plus {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 52px; height: 52px; border-radius: 14px;
+      background: var(--red); color: #fff; text-decoration: none;
+      font: 700 28px/1 "IBM Plex Sans", sans-serif;
+      box-shadow: var(--shadow); flex: 0 0 auto;
+    }
+    .form-plus:hover { filter: brightness(1.06); color: #fff; }
+    .day-pop-head .form-plus {
+      width: 40px; height: 40px; border-radius: 20px; font-size: 26px;
+      margin-left: auto;
+    }
     .agenda { display: none; }
     .agenda-day {
       border: 1px solid var(--line); border-radius: 12px; padding: 10px;
@@ -405,6 +417,7 @@
       .nav { gap: 4px; }
       .nav button { min-width: 36px; min-height: 36px; padding: 6px 8px; font-size: 14px; border-radius: 10px; }
       .nav #monthBtn, .nav #yearBtn { min-width: 56px; font-size: 15px; }
+      .form-plus { width: 36px; height: 36px; font-size: 22px; border-radius: 10px; }
       .filters {
         position: sticky; top: 0; z-index: 30;
         gap: 4px; padding: 8px;
@@ -463,7 +476,7 @@
     <header>
       <div>
         <h1>Full Month Calendar — <span class="month-name" id="monthName">September</span> <span class="year-name" id="yearName">2026</span></h1>
-        <div class="sub">v37 · Standard: <b>20 working days / month</b> · data: <b id="dataSrc">demo</b> · click <b>Year</b> for yearly summary</div>
+        <div class="sub">v38 · Standard: <b>20 working days / month</b> · data: <b id="dataSrc">demo</b> · click <b>Year</b> for yearly summary · <b>+</b> opens Google Form</div>
       </div>
       <div class="head-right">
         <div class="pf-kpis">
@@ -490,6 +503,7 @@
             <div class="year-menu" id="yearMenu"></div>
           </div>
           <button id="next" aria-label="Next month">›</button>
+          <a class="form-plus" id="formPlus" href="#" target="_blank" rel="noopener noreferrer" title="Add inspection (Google Form)" aria-label="Add inspection">+</a>
         </div>
       </div>
     </header>
@@ -603,19 +617,21 @@
         </div>
       </div>
     </div>
-    <footer>v37. Day popup: droplist Pass / Fail / Pending. Does not write the Form.</footer>
+    <footer>v38. + opens Google Form. Pass / Fail / Pending posts a new Form row — other phones / GitHub see it after refresh (~1–2 min). file:// will not live-sync.</footer>
   </div>
   <div class="day-pop" id="dayPop">
     <div class="day-pop-card" role="dialog" aria-modal="true">
       <div class="day-pop-head">
         <b id="dayPopTitle">Day</b>
+        <a class="form-plus" id="dayPopPlus" href="#" target="_blank" rel="noopener noreferrer" title="Add visit this day" aria-label="Add visit">+</a>
         <button type="button" id="dayPopClose" aria-label="Close">×</button>
       </div>
       <div class="day-pop-body" id="dayPopBody"></div>
     </div>
   </div>
 
-  <script src="sheet-config.js?v=37"></script>
+  <iframe name="qaFormSink" id="qaFormSink" title="form sink" style="position:absolute;width:0;height:0;border:0;visibility:hidden"></iframe>
+  <script src="sheet-config.js?v=38"></script>
   <script>
     const PEOPLE = [
       { id: "philip", name: "Philip", color: "#FB7185" },
@@ -858,9 +874,23 @@
         };
       }).filter(Boolean);
     }
+    const DEFAULT_FORM = "https://docs.google.com/forms/d/e/1FAIpQLScu3IzvHK7GxmVR3Sih8jBn1reFcQLzlu9i4Tgm0mRzoZHztw/viewform";
+    function jobKey(j) {
+      return [j.date, j.pic, j.factory || "", j.customer || "", j.type, j.visit || 1].join("|");
+    }
+    function coalesceJobs(list) {
+      const map = new Map();
+      list.forEach(j => {
+        const k = jobKey(j);
+        const prev = map.get(k);
+        if (!prev) { map.set(k, j); return; }
+        map.set(k, Object.assign({}, prev, j, { result: j.result || prev.result }));
+      });
+      return [...map.values()];
+    }
     let resultOverlays = {};
     function applyCsv(text, label) {
-      const live = jobsFromCsv(text);
+      const live = coalesceJobs(jobsFromCsv(text));
       if (!live.length) throw new Error("empty");
       JOBS = live;
       applyResultOverlays();
@@ -869,9 +899,13 @@
       return live;
     }
     function applyResultOverlays() {
+      const now = Date.now();
       JOBS.forEach(j => {
         const ov = resultOverlays[jobKey(j)];
-        if (ov && ov.result) j.result = ov.result;
+        if (!ov || !ov.result) return;
+        if (j.result === ov.result) return;
+        const age = ov.at ? (now - Date.parse(ov.at)) : 0;
+        if (age < 10 * 60 * 1000) j.result = ov.result;
       });
     }
     async function loadResultOverlays() {
@@ -889,15 +923,93 @@
     function resultValue(result) {
       return result === "pass" || result === "fail" ? result : "pending";
     }
+    function formViewBase() {
+      return String(window.FORM_URL || DEFAULT_FORM).trim() || DEFAULT_FORM;
+    }
+    function formViewUrl(dateIso) {
+      const base = formViewBase();
+      if (!dateIso) return base;
+      const [y, m, d] = dateIso.split("-");
+      try {
+        const u = new URL(base);
+        u.searchParams.set("usp", "pp_url");
+        u.searchParams.set("entry.289334784_year", String(Number(y)));
+        u.searchParams.set("entry.289334784_month", String(Number(m)));
+        u.searchParams.set("entry.289334784_day", String(Number(d)));
+        return u.toString();
+      } catch (e) { return base; }
+    }
+    function formPostUrl() {
+      return formViewBase().replace(/\/viewform.*$/i, "/formResponse");
+    }
+    function formCountry(code) {
+      const c = String(code || "VN").trim().toUpperCase();
+      if (c === "KH" || c === "CAMBODIA") return "CAM";
+      if (c === "IN" || c === "INDIA") return "IND";
+      return c || "VN";
+    }
+    function formType(type) {
+      const t = String(type || "final");
+      return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
+    }
+    function formResultLabel(result) {
+      if (result === "pass") return "Pass";
+      if (result === "fail") return "Fail";
+      return "Pending";
+    }
+    function bindFormPlus() {
+      const a = $("formPlus");
+      if (a) a.href = formViewUrl();
+    }
+    function postResultToForm(j, result) {
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = formPostUrl();
+      form.target = "qaFormSink";
+      form.acceptCharset = "UTF-8";
+      form.style.display = "none";
+      const [y, m, d] = String(j.date).split("-");
+      const p = pic(j.pic);
+      const fields = {
+        "entry.289334784_year": String(Number(y)),
+        "entry.289334784_month": String(Number(m)),
+        "entry.289334784_day": String(Number(d)),
+        "entry.135883859": (p && p.name) || j.pic || "",
+        "entry.639794185": j.days === 0.5 ? "0.5" : String(j.days || 1),
+        "entry.1544976538": j.factory || "",
+        "entry.938520945": j.customer || "",
+        "entry.743245550": formType(j.type),
+        "entry.481368496": j.category || "",
+        "entry.618420050": formCountry(j.country),
+        "entry.2011548640": formResultLabel(result),
+        "entry.1432378254": String(j.visit || 1),
+        fvv: "1",
+        pageHistory: "0",
+        submit: "Submit"
+      };
+      Object.keys(fields).forEach(name => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = name;
+        input.value = fields[name];
+        form.appendChild(input);
+      });
+      document.body.appendChild(form);
+      form.submit();
+      setTimeout(() => { if (form.parentNode) form.parentNode.removeChild(form); }, 4000);
+    }
     async function setJobResult(j, next) {
       const key = jobKey(j);
       const from = j.result || "";
       j.result = next;
       const hist = (resultOverlays[key] && resultOverlays[key].history) || [];
-      hist.push({ at: new Date().toISOString(), by: "staff", from, to: next });
-      resultOverlays[key] = { result: next, history: hist };
+      const at = new Date().toISOString();
+      hist.push({ at, by: "staff", from, to: next });
+      resultOverlays[key] = { result: next, at, history: hist };
       try { localStorage.setItem("qa-board-results", JSON.stringify(resultOverlays)); } catch (e) {}
       render();
+      try { postResultToForm(j, next); } catch (e) {}
+      [20000, 60000, 120000].forEach(ms => setTimeout(() => { loadJobs().then(render); }, ms));
     }
     function cachedCsv() {
       try { return localStorage.getItem(LS_CSV) || ""; } catch (e) { return ""; }
@@ -907,9 +1019,6 @@
         localStorage.setItem(LS_CSV, text);
         localStorage.setItem(LS_CSV_AT, new Date().toISOString());
       } catch (e) {}
-    }
-    function jobKey(j) {
-      return [j.date, j.pic, j.factory, j.type, j.job, j.visit].join("|");
     }
     async function loadJobs() {
       const src = $("dataSrc");
@@ -1141,6 +1250,8 @@
         ? (meta.overload && meta.conflict ? " · Overload / conflict" : meta.overload ? " · Overload" : " · Conflict")
         : "";
       $("dayPopTitle").textContent = `${DOW[mon0(d)]} ${d.getDate()} ${SHORT[d.getMonth()]}${tag}`;
+      const plus = $("dayPopPlus");
+      if (plus) plus.href = formViewUrl(key);
       const body = $("dayPopBody");
       body.innerHTML = "";
       if (!list.length) {
@@ -1766,6 +1877,7 @@
     $("passKpi").onclick = () => setFilter("result", "pass");
     $("failKpi").onclick = () => setFilter("result", "fail");
     $("dayPopClose").onclick = ev => { ev.stopPropagation(); closeDayPop(); };
+    $("dayPopPlus").onclick = ev => ev.stopPropagation();
     $("dayPop").onclick = ev => { if (ev.target.id === "dayPop") closeDayPop(); };
     document.addEventListener("keydown", ev => { if (ev.key === "Escape") closeDayPop(); });
     window.addEventListener("online", () => { loadJobs().then(render); });
@@ -1774,6 +1886,7 @@
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     try { resultOverlays = JSON.parse(localStorage.getItem("qa-board-results") || "{}"); } catch (e) { resultOverlays = {}; }
+    bindFormPlus();
     loadJobs().then(() => loadResultOverlays()).then(() => { render(); consumeAlertHash(); });
   </script>
 </body>
