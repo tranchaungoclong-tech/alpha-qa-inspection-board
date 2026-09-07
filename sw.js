@@ -1,4 +1,4 @@
-const CACHE = "qa-board-v38";
+const CACHE = "qa-board-v39";
 const PRECACHE = ["./", "./index.html", "./manifest.json", "./icon-180.png", "./icon-192.png"];
 
 self.addEventListener("install", event => {
@@ -23,7 +23,7 @@ self.addEventListener("fetch", event => {
     return;
   }
   if (url.pathname.endsWith("sheet-config.js")) {
-    event.respondWith(fetch(req));
+    event.respondWith(fetch(req, { cache: "no-store" }));
     return;
   }
   event.respondWith(

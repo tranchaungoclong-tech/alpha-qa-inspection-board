@@ -22,6 +22,8 @@ Staff change a Form row → wait ~1–2 min → refresh Pages → board updates.
 
 From **v38**, the board **+** opens the Form. Stamping Pass / Fail / Pending on a visit posts a **new Form row** (does not edit the old one). Other devices see the latest stamp after CSV refresh (~1–2 min). Duplicate rows for the same visit are coalesced — latest result wins.
 
+From **v39**, the iPhone Home Screen app pulls the live Sheet when you reopen it. Tap **↻** if the phone still shows an old stamp. Local overlay does not hide a newer GitHub / other-phone stamp.
+
 `file://` cannot fetch Google CSV. Live board needs http(s).
 
 ## Columns the board reads

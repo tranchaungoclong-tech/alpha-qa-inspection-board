@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="QA Board" />
-  <title>Alpha QA — Inspection Board v38</title>
+  <title>Alpha QA — Inspection Board v39</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon-192.png" type="image/png" />
   <link rel="apple-touch-icon" href="icon-180.png" />
@@ -376,6 +376,7 @@
       box-shadow: var(--shadow); flex: 0 0 auto;
     }
     .form-plus:hover { filter: brightness(1.06); color: #fff; }
+    .nav button.refresh { font-size: 20px; }
     .day-pop-head .form-plus {
       width: 40px; height: 40px; border-radius: 20px; font-size: 26px;
       margin-left: auto;
@@ -476,7 +477,7 @@
     <header>
       <div>
         <h1>Full Month Calendar — <span class="month-name" id="monthName">September</span> <span class="year-name" id="yearName">2026</span></h1>
-        <div class="sub">v38 · Standard: <b>20 working days / month</b> · data: <b id="dataSrc">demo</b> · click <b>Year</b> for yearly summary · <b>+</b> opens Google Form</div>
+        <div class="sub">v39 · Standard: <b>20 working days / month</b> · data: <b id="dataSrc">demo</b> · click <b>Year</b> for yearly summary · <b>+</b> opens Google Form · <b>↻</b> pulls live Sheet</div>
       </div>
       <div class="head-right">
         <div class="pf-kpis">
@@ -503,6 +504,7 @@
             <div class="year-menu" id="yearMenu"></div>
           </div>
           <button id="next" aria-label="Next month">›</button>
+          <button type="button" class="refresh" id="refreshBtn" title="Pull live Sheet" aria-label="Refresh live Sheet">↻</button>
           <a class="form-plus" id="formPlus" href="#" target="_blank" rel="noopener noreferrer" title="Add inspection (Google Form)" aria-label="Add inspection">+</a>
         </div>
       </div>
@@ -617,7 +619,7 @@
         </div>
       </div>
     </div>
-    <footer>v38. + opens Google Form. Pass / Fail / Pending posts a new Form row — other phones / GitHub see it after refresh (~1–2 min). file:// will not live-sync.</footer>
+    <footer>v39. PWA pulls the live Sheet when you reopen the app. Tap ↻ if the phone still shows an old stamp. + opens Google Form. Pass / Fail / Pending posts a new Form row (~1–2 min). file:// will not live-sync.</footer>
   </div>
   <div class="day-pop" id="dayPop">
     <div class="day-pop-card" role="dialog" aria-modal="true">
@@ -631,7 +633,7 @@
   </div>
 
   <iframe name="qaFormSink" id="qaFormSink" title="form sink" style="position:absolute;width:0;height:0;border:0;visibility:hidden"></iframe>
-  <script src="sheet-config.js?v=38"></script>
+  <script src="sheet-config.js?v=39"></script>
   <script>
     const PEOPLE = [
       { id: "philip", name: "Philip", color: "#FB7185" },
@@ -900,13 +902,29 @@
     }
     function applyResultOverlays() {
       const now = Date.now();
+      let dirty = false;
       JOBS.forEach(j => {
-        const ov = resultOverlays[jobKey(j)];
+        const key = jobKey(j);
+        const ov = resultOverlays[key];
         if (!ov || !ov.result) return;
-        if (j.result === ov.result) return;
-        const age = ov.at ? (now - Date.parse(ov.at)) : 0;
-        if (age < 10 * 60 * 1000) j.result = ov.result;
+        if (j.result === ov.result) {
+          delete resultOverlays[key];
+          dirty = true;
+          return;
+        }
+        const hist = ov.history || [];
+        const from = hist.length ? hist[hist.length - 1].from : "";
+        const age = ov.at ? (now - Date.parse(ov.at)) : Infinity;
+        const csvStillOld = !j.result || j.result === from;
+        if (age < 10 * 60 * 1000 && csvStillOld) j.result = ov.result;
+        else {
+          delete resultOverlays[key];
+          dirty = true;
+        }
       });
+      if (dirty) {
+        try { localStorage.setItem("qa-board-results", JSON.stringify(resultOverlays)); } catch (e) {}
+      }
     }
     async function loadResultOverlays() {
       try {
@@ -1029,7 +1047,7 @@
         return;
       }
       try {
-        const res = await fetch(url + (url.includes("?") ? "&" : "?") + "t=" + Date.now());
+        const res = await fetch(url + (url.includes("?") ? "&" : "?") + "t=" + Date.now(), { cache: "no-store" });
         if (!res.ok) throw new Error(res.status);
         const text = await res.text();
         applyCsv(text, "live Sheet");
@@ -1047,6 +1065,11 @@
         JOBS = DEMO_JOBS.slice();
         if (src) src.textContent = "demo (Sheet fetch failed)";
       }
+    }
+    function refreshLive() {
+      const src = $("dataSrc");
+      if (src) src.textContent = "pulling Sheet…";
+      return loadJobs().then(render);
     }
 
     function monthJobs() {
@@ -1880,14 +1903,29 @@
     $("dayPopPlus").onclick = ev => ev.stopPropagation();
     $("dayPop").onclick = ev => { if (ev.target.id === "dayPop") closeDayPop(); };
     document.addEventListener("keydown", ev => { if (ev.key === "Escape") closeDayPop(); });
-    window.addEventListener("online", () => { loadJobs().then(render); });
+    $("refreshBtn").onclick = () => { refreshLive(); };
+    window.addEventListener("online", () => { refreshLive(); });
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") refreshLive();
+    });
+    window.addEventListener("pageshow", ev => {
+      if (ev.persisted) refreshLive();
+    });
+    window.addEventListener("focus", () => { refreshLive(); });
     window.addEventListener("hashchange", consumeAlertHash);
     if (navigator.serviceWorker) {
-      navigator.serviceWorker.register("./sw.js").catch(() => {});
+      navigator.serviceWorker.register("./sw.js").then(reg => {
+        if (reg.update) reg.update().catch(() => {});
+      }).catch(() => {});
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (window.__qaReloaded) return;
+        window.__qaReloaded = true;
+        location.reload();
+      });
     }
     try { resultOverlays = JSON.parse(localStorage.getItem("qa-board-results") || "{}"); } catch (e) { resultOverlays = {}; }
     bindFormPlus();
-    loadJobs().then(() => loadResultOverlays()).then(() => { render(); consumeAlertHash(); });
+    loadJobs().then(() => { render(); consumeAlertHash(); });
   </script>
 </body>
 </html>
