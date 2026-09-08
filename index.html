@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="QA Board" />
-  <title>Alpha QA — Inspection Board v45</title>
+  <title>Alpha QA — Inspection Board v46</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon-192.png" type="image/png" />
   <link rel="apple-touch-icon" href="icon-180.png" />
@@ -499,7 +499,7 @@
     <header>
       <div>
         <h1>Full Month Calendar — <span class="month-name" id="monthName">September</span> <span class="year-name" id="yearName">2026</span></h1>
-        <div class="sub">v45 · Standard: <b>20 working days / month</b> · data: <b id="dataSrc">demo</b> · click <b>Year</b> for yearly summary · ↻ keeps your stamp until CSV updates</div>
+        <div class="sub">v46 · Standard: <b>20 working days / month</b> · data: <b id="dataSrc">demo</b> · click <b>Year</b> for yearly summary · stamp stays on ↻ until Sheet has it</div>
       </div>
       <div class="head-right">
         <div class="pf-kpis">
@@ -643,7 +643,7 @@
         </div>
       </div>
     </div>
-    <footer>v45. ↻ pulls CSV but keeps your stamp until Google publishes a new row. Leave Type stays off charts. file:// will not live-sync.</footer>
+    <footer>v46. Stamp on this phone / GitHub stays on ↻ until the Sheet shows the same Result (or a newer Form row from another device). Leave Type stays off charts. file:// will not live-sync.</footer>
   </div>
   <div class="day-pop" id="dayPop">
     <div class="day-pop-card" role="dialog" aria-modal="true">
@@ -874,6 +874,7 @@
       const iJob = col(head, ["job_id", "job"]);
       const iVisit = col(head, ["visit", "visit_1_lan_dau_2_re_inspect"]);
       const iRes = col(head, ["result", "resut"]);
+      const iTs = col(head, ["timestamp"]);
       return rows.slice(1).map(r => {
         const get = i => (i >= 0 ? String(r[i] || "").trim() : "");
         const isLeaveWord = v => /^leave$|^annual\s*leave$|^off$|^al$/i.test(String(v || "").trim());
@@ -902,9 +903,17 @@
           style: get(iStyle),
           result: type === "leave" ? "" : result,
           job: get(iJob) || `${picName}-${date}-${type === "leave" ? "leave" : factory}`,
-          visit: Number(visitRaw) || 1
+          visit: Number(visitRaw) || 1,
+          submitted: parseStamp(get(iTs))
         };
       }).filter(Boolean);
+    }
+    function parseStamp(v) {
+      const s = String(v || "").trim();
+      if (!s) return "";
+      const t = Date.parse(s);
+      if (Number.isFinite(t)) return new Date(t).toISOString();
+      return "";
     }
     const DEFAULT_FORM = "https://docs.google.com/forms/d/e/1FAIpQLScu3IzvHK7GxmVR3Sih8jBn1reFcQLzlu9i4Tgm0mRzoZHztw/viewform";
     function jobKey(j) {
@@ -912,11 +921,16 @@
     }
     function coalesceJobs(list) {
       const map = new Map();
+      const rowTime = j => {
+        const t = Date.parse(j && j.submitted || "");
+        return Number.isFinite(t) ? t : 0;
+      };
       list.forEach(j => {
         const k = jobKey(j);
         const prev = map.get(k);
         if (!prev) { map.set(k, j); return; }
-        map.set(k, Object.assign({}, prev, j, { result: j.result || prev.result }));
+        if (rowTime(j) && rowTime(prev) && rowTime(j) < rowTime(prev)) return;
+        map.set(k, Object.assign({}, prev, j));
       });
       return [...map.values()];
     }
@@ -924,6 +938,13 @@
     let lastCsvText = "";
     function csvFingerprint(text) {
       return String(text || "").replace(/\r\n/g, "\n").trim();
+    }
+    function overlayJob(key) {
+      const exact = JOBS.find(j => jobKey(j) === key);
+      if (exact) return exact;
+      const p = String(key || "").split("|");
+      if (p.length < 6) return null;
+      return JOBS.find(j => j.date === p[0] && j.pic === p[1] && j.type === p[4] && String(j.visit || 1) === String(p[5] || 1)) || null;
     }
     function applyCsv(text, label) {
       const live = coalesceJobs(jobsFromCsv(text));
@@ -937,31 +958,35 @@
     }
     function applyResultOverlays() {
       const now = Date.now();
-      const csvNow = lastCsvText;
       let dirty = false;
-      JOBS.forEach(j => {
-        const key = jobKey(j);
+      Object.keys(resultOverlays).forEach(key => {
         const ov = resultOverlays[key];
-        if (!ov || !ov.result) return;
-        if (j.result === ov.result) {
+        if (!ov || !ov.result) {
           delete resultOverlays[key];
           dirty = true;
           return;
         }
         const age = ov.at ? (now - Date.parse(ov.at)) : Infinity;
-        const csvChanged = ov.csv && ov.csv !== csvNow;
-        if (csvChanged || age >= 10 * 60 * 1000) {
+        if (age >= 24 * 60 * 60 * 1000) {
+          delete resultOverlays[key];
+          dirty = true;
+          return;
+        }
+        const j = overlayJob(key);
+        if (!j) return;
+        if (j.result === ov.result) {
+          delete resultOverlays[key];
+          dirty = true;
+          return;
+        }
+        const sheetAt = Date.parse(j.submitted || "");
+        const ovAt = Date.parse(ov.at || "");
+        if (Number.isFinite(sheetAt) && Number.isFinite(ovAt) && sheetAt > ovAt + 5000) {
           delete resultOverlays[key];
           dirty = true;
           return;
         }
         j.result = ov.result;
-      });
-      Object.keys(resultOverlays).forEach(key => {
-        if (!JOBS.some(j => jobKey(j) === key)) {
-          delete resultOverlays[key];
-          dirty = true;
-        }
       });
       if (dirty) {
         try { localStorage.setItem("qa-board-results", JSON.stringify(resultOverlays)); } catch (e) {}
@@ -1064,7 +1089,7 @@
       const hist = (resultOverlays[key] && resultOverlays[key].history) || [];
       const at = new Date().toISOString();
       hist.push({ at, by: "staff", from, to: next });
-      resultOverlays[key] = { result: next, at, history: hist, csv: lastCsvText };
+      resultOverlays[key] = { result: next, at, history: hist };
       try { localStorage.setItem("qa-board-results", JSON.stringify(resultOverlays)); } catch (e) {}
       render();
       try { postResultToForm(j, next); } catch (e) {}
